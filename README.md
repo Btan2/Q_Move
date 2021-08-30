@@ -2,7 +2,7 @@
 A Quake-like controller for Godot.
 
 # About
-The aim of this project is to provide Godot devlopers with a robust character controller that delivers the same level of responsiveness as Quake and Half-Life. A distinctive feature the character controller from those games had was the ability to detect and climb up steps, as well as slide the player's velocity off colliding surfaces while airborne. A majority of Quake-like controllers seem to lack the ability to handle steps and often have to resort to rudimentary workarounds such as invisible ramps or singular raycast lines which do not represent the player's hull accurately at all. They also do not seem to take the player's feet into account, resulting in the unrealistic ability to jump up starcaises with nary an interruption. This controller is an attempt to fix these issues.
+The aim of this project is to provide Godot devlopers with a robust character controller that delivers the same level of responsiveness as Quake and Half-Life. A distinctive feature the character controller from those games had was the ability to detect and climb up steps, as well as slide the player's velocity off colliding surfaces while airborne. A majority of Quake-like controllers seem to lack the ability to handle steps and often have to resort to rudimentary workarounds such as invisible ramps or singular raycast lines which do not represent the player's hull accurately. They also do not seem to take the player's feet into account, resulting in the unrealistic ability to jump up starcases with nary an interruption. This controller is an attempt to fix these issues.
 
 # Features
   - Various functions from Quake source code converted into GDScript
