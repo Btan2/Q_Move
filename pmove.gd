@@ -106,9 +106,10 @@ func JumpButton():
 	
 	if velocity[1] > 54.0: return
 	
-	if hangtime > 0.0 and jump_press and state != LADDER:
+	if hangtime > 0.0 and jump_press:
 		state = FALLING
 		jump_press = false
+		hangtime = 0.0
 		
 		# Make sure jump velocity is positive if falling
 		if state == FALLING || velocity[1] < 0.0:
