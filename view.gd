@@ -7,9 +7,10 @@ view.gd
 - Uses modified functions from Quake source code for weapon-bob, head-bob and so on.
 """
 
-onready var viewmodel = $ViewModel
-onready var viewmodel_origin = viewmodel.transform.origin
-onready var player = get_parent()
+onready var player : KinematicBody = get_parent()
+onready var camera : Camera = $Camera
+onready var viewmodel : Spatial = $Camera/ViewModel
+onready var viewmodel_origin : Vector3 = viewmodel.transform.origin
 
 var bobtimes = [0,0,0]
 var Q_bobtime : float = 0.0
@@ -20,6 +21,9 @@ var bobUp : float = 0.0
 var idleRight : float = 0.0
 var idleForward : float = 0.0
 var idleUp : float =  0.0
+var shakecam = false
+var shaketime : float = 0.0
+var shakelength = 0.0
 var deltaTime : float = 0.0
 var idletime : float = 0.0
 var mouse_move : Vector2 = Vector2.ZERO
@@ -47,12 +51,12 @@ const rollspeed : float = 300.0         # default: 300.0
 const tiltextra : float = 2.0           # default: 2.0
 
 #Viewmodel Sway
-const swayPos_offset : float = 0.5      # default: 0.12
-const swayPos_max : float = 0.9         # default: 0.1
-const swayPos_speed : float = 9.0       # default: 9.0
-const swayRoll_angle : float = 5.0      # default: 5.0   (old default: Vector3(5.0, 5.0, 2.0))
-const swayRoll_max : float = 15.0       # default: 15.0  (old default: Vector3(12.0, 12.0, 4.0))
-const swayRoll_speed : float = 10.0     # default: 10.0
+const swayPos_offset : float = 0.12     # default: 0.12
+const swayPos_max : float = 0.5        # default: 0.1
+const swayPos_speed : float = 7.0       # default: 9.0
+const swayRoll_angle : float = 2.0      # default: 5.0   (old default: Vector3(5.0, 5.0, 2.0))
+const swayRoll_max : float = 10.0       # default: 15.0  (old default: Vector3(12.0, 12.0, 4.0))
+const swayRoll_speed : float = 2.0     # default: 10.0
 
 #View Idle
 const idlescale : float= 1.6            # default: 1.6
@@ -98,46 +102,53 @@ _input
 func _input(event):
 	if event is InputEventMouseMotion:
 		moved = true
-		mouse_move = event.relative * sway_sensitivity
+		mouse_move = lerp(mouse_move, event.relative * mouse_sensitivity, 15 * deltaTime)
+#		mouse_move.x = event.relative.x * mouse_sensitivity
+#		mouse_move.y = event.relative.y * mouse_sensitivity
 		
 		mouse_rotation_x -= event.relative.y * mouse_sensitivity
 		mouse_rotation_x = clamp(mouse_rotation_x, -90, 90)
 		player.rotate_y(deg2rad(-event.relative.x * mouse_sensitivity))
+		
+	if Input.is_key_pressed(KEY_P):
+		TriggerShake(5.0)
 
 """
 ===============
 _process
 ===============
 """
-func _process(delta):
+func _physics_process(delta):
 	deltaTime = delta
 	
 	if player.is_dead:
-		rotation_degrees.z = 80
+		camera.rotation_degrees.z = 80
 		transform.origin = Vector3(0, -1.6, 0)
 		return
 	
+	# Need to establish point of origin before applying transforms
 	transform.origin = Vector3(0, y_offset, 0)
-	rotation_degrees = Vector3(mouse_rotation_x, 0, 0)
+	camera.rotation_degrees = Vector3(mouse_rotation_x, 0, 0)
+	viewmodel.transform.origin = viewmodel_origin
+	viewmodel.rotation_degrees = Vector3.ZERO
 	
-	ViewModelSway()
 	ViewRoll()
+	ViewModelSway()
 	
 	if player.velocity == Vector3.ZERO:
 		bobtimes = [0,0,0]
 		Q_bobtime = 0.0
 		AddIdle()
-		ViewModelIdle()
 		ViewIdle()
+		ViewModelIdle()
 	else:
 		idletime = 0.0
 		AddBob()
-		ViewModelBob()
-		
 		if newbob:
 			ViewBob1()
 		else:
 			ViewBob2()
+		ViewModelBob()
 	
 	# Smooth out stair step ups
 	if player.state == 0 and player.global_transform.origin[1] - oldy > 0:
@@ -152,9 +163,12 @@ func _process(delta):
 	
 	# Apply damage/fall kicks
 	if v_dmg_time > 0.0:
-		rotation_degrees.z += v_dmg_time / kick_time * v_dmg_roll
-		rotation_degrees.x += v_dmg_time / kick_time * v_dmg_pitch
+		camera.rotation_degrees.z += v_dmg_time / kick_time * v_dmg_roll
+		camera.rotation_degrees.x += v_dmg_time / kick_time * v_dmg_pitch
 		v_dmg_time -= delta
+	
+	if shakecam:
+		Shake(1)
 
 """
 ===============
@@ -176,20 +190,19 @@ func ViewModelSway():
 	rot.y = clamp(-mouse_move.x * swayRoll_angle, -swayRoll_max, swayRoll_max)
 	swayRoll = lerp(swayRoll, rot, swayRoll_speed * deltaTime)
 	
-	viewmodel.transform.origin = viewmodel_origin + swayPos
-	viewmodel.rotation_degrees = swayRoll
+	viewmodel.transform.origin += swayPos
+	viewmodel.rotation_degrees += swayRoll
 	
 	moved = false
 
 """
 ===============
-CalcViewRoll
-Roll view and viewmodel by movement
+ViewRoll
 ===============
 """
 func ViewRoll():
 	var side = CalcRoll(player.velocity, rollangles, rollspeed) * 4;
-	rotation_degrees.z += side
+	camera.rotation_degrees.z += side
 	viewmodel.rotation_degrees.z = side * tiltextra
 
 """
@@ -215,7 +228,6 @@ func CalcRoll (velocity, rollangle, rollspeed):
 """
 ==============
 AddIdle
-Calculate idle sinewaves
 ==============
 """
 func AddIdle():
@@ -227,18 +239,16 @@ func AddIdle():
 """
 ===============
 ViewIdle
-Idle view bob
 ===============
 """
 func ViewIdle():
-	rotation_degrees.x += idleUp
-	rotation_degrees.y += idleRight
-	rotation_degrees.z += idleForward
+	camera.rotation_degrees.x += idleUp
+	camera.rotation_degrees.y += idleRight
+	camera.rotation_degrees.z += idleForward
 
 """
 ===============
 ViewModelIdle
-Idle weapon bob
 ===============
 """
 func ViewModelIdle():
@@ -260,7 +270,6 @@ func AddBob():
 """
 ===============
 ViewModelBob
-Bob view model on xyz axes
 ===============
 """
 func ViewModelBob():
@@ -271,18 +280,30 @@ func ViewModelBob():
 
 """
 ===============
-ViewBob
-Bob view up/down with slight z axis roll
+ViewBob1
+More modern head bobbing
 ===============
 """
 func ViewBob1():
-	rotation_degrees.z += bobRight * 0.8
-	rotation_degrees.y -= bobUp * 0.8
-	rotation_degrees.x += bobRight * 1.2
+	camera.rotation_degrees.z += bobRight * 0.8
+	camera.rotation_degrees.y -= bobUp * 0.8
+	camera.rotation_degrees.x += bobRight * 1.2
 
+"""
+===============
+ViewBob2
+Quake head bob
+===============
+"""
 func ViewBob2():
 	transform.origin[1] += Q_CalcBob()
 
+"""
+===============
+Q_CalcBob
+Quake bob
+===============
+"""
 func Q_CalcBob():
 	var vel        : Vector3
 	var cycle      : float
@@ -341,6 +362,45 @@ func CalcBob (freqmod: float, mode, bob_i: int, bob: float):
 	bob = clamp(bob, -7, 4)
 	
 	return bob
+
+"""
+==============
+TriggerShake
+==============
+"""
+func TriggerShake(time):
+	shakecam = true
+	shaketime = 0.0
+	shakelength = time
+	yield(get_tree().create_timer(time),"timeout")
+	shakecam = false
+
+"""
+==============
+Shake
+==============
+"""
+func Shake(easing):
+	var cycle = Vector3(33, 44, 36)
+	var m_level = Vector3(0.02, 0.06, 0.02)
+	var v_level = Vector3(-1.5, 2, 1.25)
+	var s_scale : float
+	
+	shaketime += deltaTime 
+	
+	easing = clamp(easing, 0, 2)
+	if easing == 0: # No shake easing, stops suddenly
+		s_scale = 1.0
+	elif easing == 1: # Ease off scaling towards the end of the shake
+		var diff = shakelength - shaketime
+		s_scale = diff if diff <= 1.0 else 1.0
+	elif easing == 2: # Ease off scaling throughout the entire shake
+		s_scale = 1.0 - shaketime/shakelength
+	
+	for i in range(3):
+		viewmodel.transform.origin[i] += s_scale * sin(shaketime * cycle[i]) * m_level[i]
+		camera.rotation_degrees[i] += s_scale * sin(shaketime * cycle[i]) * v_level[i]
+	
 
 """
 ==============

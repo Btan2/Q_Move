@@ -48,7 +48,6 @@ func _input(_event):
 		jump_press = true
 	elif Input.is_action_just_released("jump"):
 		jump_press = false
-	
 
 """
 ===============
@@ -65,7 +64,6 @@ func _physics_process(delta):
 		GroundMove()
 	else:
 		AirMove()
-	
 
 """
 ===============
@@ -154,6 +152,7 @@ func GroundAccelerate(wishdir, wishspeed):
 """
 ===============
 StepMove
+Check for non-steep raised ground
 ===============
 """
 func StepMove(original_pos):
