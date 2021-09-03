@@ -18,9 +18,11 @@ The aim of this project is to provide Godot devlopers with a robust character co
 
 # Current Issues
   - Trace function is a little inefficient as certain collision shape casting methods will not return all of the required information for collision response. I have to use 3 different collision shape casts in order to retrieve the distance fraction, collision normal and position of the shape when it collides with something. This is undesirable, so hint-hint Godot engine developers...
-  - The controller will slowly slide down slopes, although this is an issue across the board with Godot.
+  - The controller will slowly slide down non-steep slopes, although this is an issue across the board with Godot at the moment.
   - Complex geometry hasn't been tested yet, only simple box shapes have been used so far.
   - Slight collision jitters when moving against two object surfaces that overlap one another.
+  - Programmed in Godot 3.3.3, you may experience more collision jitters with previous Godot versions
+  - The player can slowly move up steep slopes that they should otherwise slide down, although this was also prevalent in Half-Life and Quake so I might keep it in for prosterity. Moving along slopes that connect with ground can cause small camera jitters.
 
 # License
 This project is under the GNU v3 license. I would highly appreciate a credit if you use this in your project(s).
