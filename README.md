@@ -26,7 +26,7 @@ NOTE: Website is currently under construction so it may contain broken links or 
   - Complex geometry hasn't been tested yet, only simple box shapes have been used so far.
   - Slight collision jitters when moving against two object surfaces that overlap one another.
   - Programmed in Godot 3.3.3, you may experience more collision jitters with previous Godot versions
-  - The player can slowly move up steep slopes that they should otherwise slide down, although this was also prevalent in Half-Life and Quake so I might keep it in for prosterity. Moving along slopes that connect with ground can cause small camera jitters.
+  - The player can slowly move up steep slopes that they should otherwise slide down, although this was also prevalent in Half-Life and Quake so I might keep it in for prosterity. Moving along the base of steep slopes that connect with ground can cause small camera jitters.
 
 # License
 This project is under the GNU v3 license. I would highly appreciate a credit if you use this in your project(s).
