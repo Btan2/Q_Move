@@ -5,12 +5,12 @@ view.gd
 
 - Controls the player view and view-model (i.e their weapon)
 - Uses modified functions from Quake source code for weapon-bob, head-bob and so on.
+- Lots of vars, so you might want to hard code some values before building
 """
-
-onready var player : KinematicBody = get_parent()
-onready var camera : Camera = $Camera
-onready var viewmodel : Spatial = $Camera/ViewModel
-onready var viewmodel_origin : Vector3 = viewmodel.transform.origin
+onready var camera = $Camera
+onready var viewmodel = $Camera/ViewModel
+onready var viewmodel_origin = viewmodel.transform.origin
+onready var player = get_parent()
 
 var bobtimes = [0,0,0]
 var Q_bobtime : float = 0.0
@@ -29,7 +29,7 @@ var idletime : float = 0.0
 var mouse_move : Vector2 = Vector2.ZERO
 var moved : bool  = false
 var mouse_rotation_x : float = 0.0
-var newbob : bool = false # Use more modern head-bobbing otherwise uses Quake-style head-bobbing
+var newbob : bool = false
 var oldy : float = 0.0
 var swayPos : Vector3 = Vector3.ZERO
 var swayRoll : Vector3 = Vector3.ZERO
@@ -38,48 +38,48 @@ var v_dmg_roll : float = 0.0
 var v_dmg_pitch : float = 0.0
 
 #Bob
-const cl_bob : float = 0.01             # default: 0.01
-const cl_bobup : float = 0.5            # default: 0.5
-const cl_bobcycle : float = 0.8         # default: 0.8
-const ql_bob : float = 0.012             # default: 0.012
-const ql_bobup : float = 0.5            # default: 0.5
-const ql_bobcycle : float = 0.6         # default: 0.6
+var cl_bob : float = 0.01             # default: 0.01
+var cl_bobup : float = 0.5            # default: 0.5
+var cl_bobcycle : float = 0.8         # default: 0.8
+var ql_bob : float = 0.012             # default: 0.012
+var ql_bobup : float = 0.5            # default: 0.5
+var ql_bobcycle : float = 0.6         # default: 0.6
 
 #Roll
-const rollangles : float = 7.0          # default: 15.0
-const rollspeed : float = 300.0         # default: 300.0
-const tiltextra : float = 2.0           # default: 2.0
+var rollangles : float = 7.0          # default: 15.0
+var rollspeed : float = 300.0         # default: 300.0
+var tiltextra : float = 2.0           # default: 2.0
 
 #Viewmodel Sway
-const swayPos_offset : float = 0.12     # default: 0.12
-const swayPos_max : float = 0.5        # default: 0.1
-const swayPos_speed : float = 7.0       # default: 9.0
-const swayRoll_angle : float = 2.0      # default: 5.0   (old default: Vector3(5.0, 5.0, 2.0))
-const swayRoll_max : float = 10.0       # default: 15.0  (old default: Vector3(12.0, 12.0, 4.0))
-const swayRoll_speed : float = 2.0     # default: 10.0
+var swayPos_offset : float = 0.12     # default: 0.12
+var swayPos_max : float = 0.5        # default: 0.1
+var swayPos_speed : float = 7.0       # default: 9.0
+var swayRoll_angle : float = 2.0      # default: 5.0   (old default: Vector3(5.0, 5.0, 2.0))
+var swayRoll_max : float = 10.0       # default: 15.0  (old default: Vector3(12.0, 12.0, 4.0))
+var swayRoll_speed : float = 2.0     # default: 10.0
 
 #View Idle
-const idlescale : float= 1.6            # default: 1.6
-const iyaw_cycle : float = 1.5          # default: 1.5
-const iroll_cycle : float = 1.0         # default: 1.0
-const ipitch_cycle : float = 2.0        # default: 2.0
-const iyaw_level : float = 0.1          # default: 0.1
-const iroll_level : float = 0.2         # default: 0.2
-const ipitch_level : float = 0.15       # default: 0.15
+var idlescale : float= 1.6            # default: 1.6
+var iyaw_cycle : float = 1.5          # default: 1.5
+var iroll_cycle : float = 1.0         # default: 1.0
+var ipitch_cycle : float = 2.0        # default: 2.0
+var iyaw_level : float = 0.1          # default: 0.1
+var iroll_level : float = 0.2         # default: 0.2
+var ipitch_level : float = 0.15       # default: 0.15
 
 # Viewmodel Idle
-const idlePos_scale = 0.1                         #default: 0.1
-const idleRot_scale = 0.5                         #default: 0.5
-const idlePos_cycle = Vector3(2.0, 4.0, 0)        #default: Vector3(2.0, 4.0, 0) 
-const idlePos_level = Vector3(0.02, 0.045, 0)     #default: Vector3(0.02, 0.045, 0) 
-const idleRot_cycle = Vector3(1.0, 0.5, 1.25)     #default: Vector3(1.0, 0.5, 1.25)
-const idleRot_level = Vector3(-1.5, 2, 1.5)       #default: Vector3(-1.5, 2, 1.5)
+var idlePos_scale = 0.1                         #default: 0.1
+var idleRot_scale = 0.5                         #default: 0.5
+var idlePos_cycle = Vector3(2.0, 4.0, 0)        #default: Vector3(2.0, 4.0, 0) 
+var idlePos_level = Vector3(0.02, 0.045, 0)     #default: Vector3(0.02, 0.045, 0) 
+var idleRot_cycle = Vector3(1.0, 0.5, 1.25)     #default: Vector3(1.0, 0.5, 1.25)
+var idleRot_level = Vector3(-1.5, 2, 1.5)       #default: Vector3(-1.5, 2, 1.5)
+
+var mouse_sensitivity : float = 0.1
 
 const kick_time : float = 0.5           # default: 0.5
 const kick_amount : float = 0.6         # default: 0.6
 const y_offset : float = 1.25           # default: 1.0
-const sway_sensitivity : float = 0.01   # default: 0.01
-const mouse_sensitivity : float = 0.1
 
 enum { VB_COS, VB_SIN, VB_COS2, VB_SIN2 }
 const bob_mode = VB_SIN
@@ -121,45 +121,50 @@ _process
 func _physics_process(delta):
 	deltaTime = delta
 	
+	# Player can still look around if dead
+	camera.rotation_degrees = Vector3(mouse_rotation_x, 0, 0)
+	
 	if player.is_dead:
 		camera.rotation_degrees.z = 80
 		transform.origin = Vector3(0, -1.6, 0)
 		return
 	
-	# Need to establish point of origin before applying transforms
+	# Set points of origin
 	transform.origin = Vector3(0, y_offset, 0)
-	camera.rotation_degrees = Vector3(mouse_rotation_x, 0, 0)
 	viewmodel.transform.origin = viewmodel_origin
 	viewmodel.rotation_degrees = Vector3.ZERO
 	
-	ViewRoll()
+	VelocityRoll()
 	ViewModelSway()
 	
 	if player.velocity == Vector3.ZERO:
 		bobtimes = [0,0,0]
 		Q_bobtime = 0.0
+		
 		AddIdle()
 		ViewIdle()
 		ViewModelIdle()
 	else:
 		idletime = 0.0
+		
 		AddBob()
 		if newbob:
-			ViewBob1()
+			ViewBobNew()
 		else:
-			ViewBob2()
+			ViewBob()
 		ViewModelBob()
 	
 	# Smooth out stair step ups
-	if player.state == 0 and player.global_transform.origin[1] - oldy > 0:
+	var current = player.global_transform.origin[1]
+	if player.state == 0 and current - oldy > 0:
 		oldy += delta * 15.0
-		if oldy > player.global_transform.origin[1]:
-			oldy = player.global_transform.origin[1]
-		if player.global_transform.origin[1] - oldy > 1.2:
-			oldy = player.global_transform.origin[1] - 1.2
-		transform.origin[1] += oldy - player.global_transform.origin[1]
+		if oldy > current:
+			oldy = current
+		if current - oldy > 1.2:
+			oldy = current - 1.2
+		transform.origin[1] += oldy - current
 	else:
-		oldy = player.global_transform.origin[1]
+		oldy = current
 	
 	# Apply damage/fall kicks
 	if v_dmg_time > 0.0:
@@ -180,6 +185,8 @@ func ViewModelSway():
 	if !moved:
 		mouse_move = mouse_move.linear_interpolate(Vector2.ZERO, 1 * deltaTime)
 	
+	moved = false
+	
 	var pos = Vector3.ZERO 
 	pos.x = clamp(-mouse_move.x * swayPos_offset, -swayPos_max, swayPos_max)
 	pos.y = clamp(mouse_move.y * swayPos_offset, -swayPos_max, swayPos_max)
@@ -192,15 +199,13 @@ func ViewModelSway():
 	
 	viewmodel.transform.origin += swayPos
 	viewmodel.rotation_degrees += swayRoll
-	
-	moved = false
 
 """
 ===============
-ViewRoll
+VelocityRoll
 ===============
 """
-func ViewRoll():
+func VelocityRoll():
 	var side = CalcRoll(player.velocity, rollangles, rollspeed) * 4;
 	camera.rotation_degrees.z += side
 	viewmodel.rotation_degrees.z = side * tiltextra
@@ -211,7 +216,7 @@ CalcRoll
 Roll angle left/right based on velocity
 ===============
 """
-func CalcRoll (velocity, rollangle, rollspeed):
+func CalcRoll (velocity, angle, speed):
 	var _sign : float
 	var side : float
 	
@@ -219,15 +224,16 @@ func CalcRoll (velocity, rollangle, rollspeed):
 	_sign = -1 if side < 0 else 1
 	side = abs(side)
 	
-	if (side < rollspeed):
-		side = side * rollangle / rollspeed;
+	if (side < speed):
+		side = side * angle / speed;
 	else:
-		side = rollangle;
+		side = angle;
 	return side * _sign
 
 """
 ==============
 AddIdle
+Calculate idle sinewaves
 ==============
 """
 func AddIdle():
@@ -259,7 +265,6 @@ func ViewModelIdle():
 """
 ===============
 AddBob
-Set bob sinewaves
 ===============
 """
 func AddBob():
@@ -270,6 +275,7 @@ func AddBob():
 """
 ===============
 ViewModelBob
+Bob view model on xyz axes
 ===============
 """
 func ViewModelBob():
@@ -280,22 +286,22 @@ func ViewModelBob():
 
 """
 ===============
-ViewBob1
-More modern head bobbing
+ViewBobNew
+More modern head bob
 ===============
 """
-func ViewBob1():
+func ViewBobNew():
 	camera.rotation_degrees.z += bobRight * 0.8
 	camera.rotation_degrees.y -= bobUp * 0.8
 	camera.rotation_degrees.x += bobRight * 1.2
 
 """
 ===============
-ViewBob2
-Quake head bob
+ViewBob
+Original Quake bob
 ===============
 """
-func ViewBob2():
+func ViewBob():
 	transform.origin[1] += Q_CalcBob()
 
 """
@@ -389,7 +395,7 @@ func Shake(easing):
 	shaketime += deltaTime 
 	
 	easing = clamp(easing, 0, 2)
-	if easing == 0: # No shake easing, stops suddenly
+	if easing == 0: # No shake easing
 		s_scale = 1.0
 	elif easing == 1: # Ease off scaling towards the end of the shake
 		var diff = shakelength - shaketime

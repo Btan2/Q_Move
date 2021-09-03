@@ -9,9 +9,10 @@ pmove.gd
 """
 
 onready var collider : CollisionShape = $CollisionShape
+onready var head : Spatial = $Head
 
-const MOVESPEED : float = 32.0       # default: 32.0
-#const MAXSPEED : float = 32.0       # default: 32.0
+const MAXSPEED : float = 32.0        # default: 32.0
+const WALKSPEED : float = 12.0       # default: 16.0
 const STOPSPEED : float = 10.0       # default: 10.0
 const GRAVITY : float = 80.0         # default: 80.0
 const ACCELERATE : float = 10.0      # default: 10.0
@@ -19,17 +20,19 @@ const AIRACCELERATE : float = 0.25   # default: 0.7
 const MOVEFRICTION : float = 6.0     # default: 6.0
 const JUMPFORCE : float = 27.0       # default: 27.0
 const AIRCONTROL : float = 0.9       # default: 0.9
-#const WALKSPEED : float = 12.0      # default: 16.0
 const STEPSIZE : float = 1.8         # default: 1.8
 const MAXHANG : float = 0.2          # defualt: 0.2
 
 var deltaTime : float = 0.0
+var movespeed : float = 32.0
 var fmove : float = 0.0
+var smove : float = 0.0
 var ground_normal : Vector3 = Vector3.UP
 var hangtime : float = 0.2
+var impact_velocity : float = 0.0
 var is_dead : bool = false
 var jump_press : bool = false
-var smove : float = 0.0
+var prev_y : float = 0.0
 var velocity : Vector3 = Vector3.ZERO
 
 enum {GROUNDED, FALLING, LADDER, SWIMMING, NOCLIP}
@@ -41,13 +44,27 @@ _input
 ===============
 """
 func _input(_event):
+	
+	if Input.is_key_pressed(KEY_K):
+		is_dead = true if !is_dead else false
+	
+	# Ignore inputs if dead
+	if is_dead:
+		fmove = 0.0
+		smove = 0.0
+		jump_press = false
+		return
+	
 	fmove = Input.get_action_strength("move_forward") - Input.get_action_strength("move_backward")
 	smove = Input.get_action_strength("move_right") - Input.get_action_strength("move_left")
+	
+	movespeed = WALKSPEED if Input.is_action_pressed("shift") else MAXSPEED
 	
 	if Input.is_action_just_pressed("jump") and !jump_press:
 		jump_press = true
 	elif Input.is_action_just_released("jump"):
 		jump_press = false
+	
 
 """
 ===============
@@ -64,6 +81,7 @@ func _physics_process(delta):
 		GroundMove()
 	else:
 		AirMove()
+	
 
 """
 ===============
@@ -85,8 +103,27 @@ func CategorizePosition():
 		if ground_normal[1] < 0.7:
 			state = FALLING # Too steep!
 		else:
+			if state == FALLING:
+				CalcFallDamage()
+			
 			global_transform.origin = trace[1] # Clamp to ground
+			prev_y = global_transform.origin[1]
+			impact_velocity = 0
+			
 			state = GROUNDED
+
+"""
+===============
+CalcFallDamage
+===============
+"""
+func CalcFallDamage():
+	var fall_dist = int(round(abs(prev_y - global_transform.origin[1])))
+	if fall_dist >= 20 && impact_velocity >= 45: 
+		head.ParseDamage(Vector3.ONE * float(impact_velocity / 6))
+	else:
+		if fall_dist >= 8:
+			head.ParseDamage(Vector3.ONE * float(impact_velocity / 8))
 
 """
 ===============
@@ -123,11 +160,13 @@ GroundMove
 func GroundMove():
 	var wishdir = transform.basis.x.slide(ground_normal) * smove + -transform.basis.z.slide(ground_normal) * fmove
 	wishdir = wishdir.normalized()
-	GroundAccelerate(wishdir, MOVESPEED)
+	GroundAccelerate(wishdir, movespeed)
 	# warning-ignore:return_value_discarded
 	move_and_slide(velocity, ground_normal, true, 5) 
 	
-	#$Label.text = str(get_slide_count())
+	# Don't move up steps if dead
+	if is_dead : return 
+	
 	for i in range(get_slide_count()):
 		if get_slide_collision(i).normal[1] < 0.7:
 			StepMove(global_transform.origin)
@@ -138,8 +177,11 @@ GroundAccelerate
 ===============
 """
 func GroundAccelerate(wishdir, wishspeed):
+	# TODO: Friction should constantly influence acceleration, it is only
+	# being applied after move release at the moment...
+	#var friction = 0.2
+	#velocity = velocity.linear_interpolate(wishdir * wishspeed, friction/10 * ACCELERATE * deltaTime) 
 	
-	# Friction applied after move release
 	if wishdir != Vector3.ZERO:
 		velocity = velocity.linear_interpolate(wishdir * wishspeed, ACCELERATE * deltaTime) 
 	else:
@@ -152,7 +194,6 @@ func GroundAccelerate(wishdir, wishspeed):
 """
 ===============
 StepMove
-Check for non-steep raised ground
 ===============
 """
 func StepMove(original_pos):
@@ -175,11 +216,10 @@ func StepMove(original_pos):
 	var down = Vector3(trace[0][0], original_pos[1], trace[0][2])
 	trace = Trace.normal(trace[0], down, collider.shape, self)
 	
-	# Move to trace collision position if higher than original position and not steep 
+	# Move to trace collision position if step is higher than original position and not steep 
 	if trace[0][1] > original_pos[1] and trace[1][1] >= 0.7: 
 		global_transform.origin = trace[0]
 	
-	# Slide along trace normal
 	velocity = velocity.slide(trace[1])
 
 """
@@ -190,12 +230,19 @@ AirMove
 func AirMove():
 	var wishdir = transform.basis.x.slide(ground_normal) * smove + -transform.basis.z.slide(ground_normal) * fmove
 	wishdir = wishdir.normalized()
+	#wishdir[1] = 0.0
 	
 	AirAccelerate(wishdir, STOPSPEED if velocity.dot(wishdir) < 0 else AIRACCELERATE)
 	if (AIRCONTROL > 0.0): 
 		AirControl(wishdir)
 	
 	velocity[1] -= GRAVITY * deltaTime
+	
+	# Cache Y position if moving/jumping up
+	if global_transform.origin[1] >= prev_y: 
+		prev_y = global_transform.origin[1]
+	
+	impact_velocity = abs(int(round(velocity[1])))
 	
 	var collision = move_and_collide(velocity * deltaTime) 
 	if collision:
@@ -212,10 +259,10 @@ func AirAccelerate(wishdir, accel):
 	var currentspeed : float
 	
 	currentspeed = velocity.dot(wishdir)
-	addspeed = MOVESPEED - currentspeed
+	addspeed = movespeed - currentspeed
 	if addspeed <= 0.0: return
 	
-	accelspeed = accel * deltaTime * MOVESPEED
+	accelspeed = accel * deltaTime * movespeed
 	if accelspeed > addspeed: accelspeed = addspeed
 	
 	velocity[0] += accelspeed * wishdir[0]
