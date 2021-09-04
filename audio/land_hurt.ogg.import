@@ -1,0 +1,15 @@
+[remap]
+
+importer="ogg_vorbis"
+type="AudioStreamOGGVorbis"
+path="res://.import/land_hurt.ogg-61eeacc7d4cd858f4b962e84ed82a4f4.oggstr"
+
+[deps]
+
+source_file="res://audio/land_hurt.ogg"
+dest_files=[ "res://.import/land_hurt.ogg-61eeacc7d4cd858f4b962e84ed82a4f4.oggstr" ]
+
+[params]
+
+loop=false
+loop_offset=0

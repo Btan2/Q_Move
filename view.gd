@@ -280,9 +280,9 @@ Bob view model on xyz axes
 """
 func ViewModelBob():
 	for i in range(3):
-		viewmodel.transform.origin[i] += bobRight * 0.5 * transform.basis.x[i]
-		viewmodel.transform.origin[i] += bobUp * 0.25 * transform.basis.y[i]
-		viewmodel.transform.origin[i] += bobForward * 0.125 * transform.basis.z[i]
+		viewmodel.transform.origin[i] += bobRight * 0.25 * transform.basis.x[i]
+		viewmodel.transform.origin[i] += bobUp * 0.125 * transform.basis.y[i]
+		viewmodel.transform.origin[i] += bobForward * 0.06125 * transform.basis.z[i]
 
 """
 ===============

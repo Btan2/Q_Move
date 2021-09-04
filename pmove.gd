@@ -3,13 +3,15 @@ extends KinematicBody
 """
 pmove.gd
 
-- Controls player movement
-- Player may still slide down slopes!
-- Not yet tested with complex geometry, only simple box shapes
+- Player movement controller
+- Player will still slide down slopes. Please fix this issue Godot!
+- Only tested with simple 3D shapes such as boxes and spheres.
+- "move_and_slide" is causing buggy velocity clipping when moving against vertical walls and concave surfaces.
 """
 
 onready var collider : CollisionShape = $CollisionShape
 onready var head : Spatial = $Head
+onready var sfx : Node = $Audio
 
 const MAXSPEED : float = 32.0        # default: 32.0
 const WALKSPEED : float = 12.0       # default: 16.0
@@ -76,6 +78,7 @@ func _physics_process(delta):
 	
 	CategorizePosition()
 	JumpButton()
+	#Friction()
 	
 	if state == GROUNDED:
 		GroundMove()
@@ -120,8 +123,11 @@ CalcFallDamage
 func CalcFallDamage():
 	var fall_dist = int(round(abs(prev_y - global_transform.origin[1])))
 	if fall_dist >= 20 && impact_velocity >= 45: 
+		jump_press = false
+		sfx.PlayLandHurt()
 		head.ParseDamage(Vector3.ONE * float(impact_velocity / 6))
 	else:
+		#sfx.play_land(impact_velocity)
 		if fall_dist >= 8:
 			head.ParseDamage(Vector3.ONE * float(impact_velocity / 8))
 
@@ -146,6 +152,8 @@ func JumpButton():
 		jump_press = false
 		hangtime = 0.0
 		
+		sfx.PlayJump()
+		
 		# Make sure jump velocity is positive if falling
 		if state == FALLING || velocity[1] < 0.0:
 			velocity[1] = JUMPFORCE
@@ -160,9 +168,12 @@ GroundMove
 func GroundMove():
 	var wishdir = transform.basis.x.slide(ground_normal) * smove + -transform.basis.z.slide(ground_normal) * fmove
 	wishdir = wishdir.normalized()
+	
 	GroundAccelerate(wishdir, movespeed)
-	# warning-ignore:return_value_discarded
-	move_and_slide(velocity, ground_normal, true, 5) 
+	
+	#var original_vel = velocity
+	
+	move_and_slide(velocity)
 	
 	# Don't move up steps if dead
 	if is_dead : return 
@@ -170,26 +181,8 @@ func GroundMove():
 	for i in range(get_slide_count()):
 		if get_slide_collision(i).normal[1] < 0.7:
 			StepMove(global_transform.origin)
-
-"""
-===============
-GroundAccelerate
-===============
-"""
-func GroundAccelerate(wishdir, wishspeed):
-	# TODO: Friction should constantly influence acceleration, it is only
-	# being applied after move release at the moment...
-	#var friction = 0.2
-	#velocity = velocity.linear_interpolate(wishdir * wishspeed, friction/10 * ACCELERATE * deltaTime) 
 	
-	if wishdir != Vector3.ZERO:
-		velocity = velocity.linear_interpolate(wishdir * wishspeed, ACCELERATE * deltaTime) 
-	else:
-		velocity = velocity.linear_interpolate(Vector3.ZERO, MOVEFRICTION * deltaTime) 
-	
-	# Don't bother with tiny velocities
-	if velocity.length() < 0.1:
-		velocity = Vector3.ZERO
+	#velocity = original_vel
 
 """
 ===============
@@ -295,3 +288,113 @@ func AirControl(wishdir):
 	velocity[1] = original_y
 	velocity[2] *= speed
 	
+
+"""
+===============
+GroundAccelerate
+===============
+"""
+func GroundAccelerate(wishdir, wishspeed):
+	var accel = ACCELERATE
+	var friction = MOVEFRICTION
+	var speed = velocity.length()
+	
+	if state == LADDER:
+		friction = 30.0
+	elif speed > 0.0:
+		# If the leading edge is over a dropoff, increase friction
+		var start = transform.origin
+		start[0] += velocity[0] / speed * 1.6
+		start[2] += velocity[2] / speed * 1.6
+		var stop = Vector3.ZERO
+		stop[0] = start[0]
+		stop[1] = start[1] - 3.4
+		stop[2] = start[2]
+		var fraction = Trace.fraction(start, stop, collider.shape, self)
+		if fraction == 1:
+			friction *= 2.0
+	
+	# Friction applied after move release
+	if wishdir != Vector3.ZERO:
+		velocity = velocity.linear_interpolate(wishdir * wishspeed, accel * deltaTime) 
+	else:
+		velocity = velocity.linear_interpolate(Vector3.ZERO, friction * deltaTime) 
+	
+	# Don't bother with tiny velocities
+	if velocity.length() < 0.1:
+		velocity = Vector3.ZERO
+
+#"""
+#===============
+#Friction
+#===============
+#"""
+#func Friction():
+#	var speed : float
+#	var newspeed : float
+#	var control : float
+#	var friction : float
+#	var drop : float
+#	var trace
+#
+#	speed = velocity.length()
+#	if speed <= 0:
+#		return
+#
+#	friction = MOVEFRICTION
+#
+#	# if the leading edge is over a dropoff, increase friction
+#	if state == GROUNDED: 
+#		var start = transform.origin
+#		var stop = Vector3.ZERO
+#		start[0] += velocity[0]/speed*1.6
+#		stop[0] = start[0]
+#		start[2] += velocity[2]/speed*1.6
+#		stop[2] = start[2]
+#		stop[1] = start[1] - 3.4
+#
+#		trace = Trace.fraction(start, stop, collider.shape, self)
+#
+#		if trace == 1:
+#			friction *= 2
+#
+#	drop = 0
+#	if state == GROUNDED:
+#		if speed < STOPSPEED:
+#			control = STOPSPEED
+#		else:
+#			control = speed
+#
+#		drop += control * friction * deltaTime
+#
+#	newspeed = speed - drop
+#	if newspeed < 0:
+#		newspeed = 0
+#	newspeed /= speed
+#
+#	velocity[0] *= newspeed
+#	velocity[1] *= newspeed
+#	velocity[2] *= newspeed
+#
+#"""
+#===============
+#Accelerate
+#===============
+#"""
+#func Accelerate(wishdir, wishspeed, accel):
+#	var addspeed : float
+#	var accelspeed : float
+#	var currentspeed : float
+#
+#	currentspeed = velocity.dot(wishdir)
+#	addspeed = wishspeed - currentspeed
+#	if addspeed <= 0:
+#		return
+#
+#	accelspeed = accel * deltaTime * wishspeed
+#	if accelspeed > addspeed:
+#		accelspeed = addspeed
+#
+#	velocity[0] += accelspeed * wishdir[0]
+#	velocity[1] += accelspeed * wishdir[1]
+#	velocity[2] += accelspeed * wishdir[2]

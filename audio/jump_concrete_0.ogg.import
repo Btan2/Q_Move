@@ -1,0 +1,15 @@
+[remap]
+
+importer="ogg_vorbis"
+type="AudioStreamOGGVorbis"
+path="res://.import/jump_concrete_0.ogg-f8659ed9259ea6338b53a449e22bd556.oggstr"
+
+[deps]
+
+source_file="res://audio/jump_concrete_0.ogg"
+dest_files=[ "res://.import/jump_concrete_0.ogg-f8659ed9259ea6338b53a449e22bd556.oggstr" ]
+
+[params]
+
+loop=false
+loop_offset=0
