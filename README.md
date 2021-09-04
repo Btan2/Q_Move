@@ -9,7 +9,7 @@ A generalised description on how the step function works can be found on my webs
 NOTE: Website is currently under construction so it may contain broken links or text/heading alignment errors.
 
 # Features
-  - Various functions from Quake source code have been converted into GDScript, such as head-bob and camera movement rolling to name a few. 
+  - Various functions from Quake source code have been converted into GDScript, such as head-bob and camera movement rolling. 
   - Air control and acceleration was taken and modified from WiggleWizard's Quake3 Movement script (https://github.com/WiggleWizard/quake3-movement-unity3d).
   - Optional modern style head-bob converted from Admer456's "Better View Bobbing" tutorial (https://gamebanana.com/tuts/12972).
   - Proper step climbing; no invisible ramps or other trickery used.
