@@ -95,14 +95,15 @@ PlayFootstep
 func PlayFootstep(vel):
 	var position : Vector3
 	var step_threshold : float
-	
+	var halfspeed : float
 	# Get horizontal distance from move
 	position = player.global_transform.origin
 	position[1] = 0.0
 	step_distance += position.distance_to(last_position)
 	last_position = position
 	
-	step_threshold = run_threshold if vel > (player.MAXSPEED - player.WALKSPEED) else walk_threshold
+	halfspeed = player.WALKSPEED + (player.MAXSPEED - player.WALKSPEED) / 2
+	step_threshold = run_threshold if vel > halfspeed else walk_threshold
 	
 	if step_distance > step_threshold:
 		var volume = clamp(vel / player.MAXSPEED * 0.5, 0.2, 0.5) * footstep_volume
