@@ -78,7 +78,6 @@ func _physics_process(delta):
 	
 	CategorizePosition()
 	JumpButton()
-	#Friction()
 	
 	if state == GROUNDED:
 		GroundMove()
@@ -93,9 +92,12 @@ Check if the player is touching the ground
 ===============
 """
 func CategorizePosition():
+	var down : Vector3
+	var trace
+	
 	# Check for ground 0.1 units below the player
-	var down = global_transform.origin + Vector3.DOWN * 0.1
-	var trace = Trace.normalfrac(global_transform.origin, down, collider.shape, self)
+	down = global_transform.origin + Vector3.DOWN * 0.1
+	trace = Trace.normalfrac(global_transform.origin, down, collider.shape, self)
 	
 	if trace[0] == 1:
 		state = FALLING
@@ -121,7 +123,9 @@ CalcFallDamage
 ===============
 """
 func CalcFallDamage():
-	var fall_dist = int(round(abs(prev_y - global_transform.origin[1])))
+	var fall_dist : int
+	
+	fall_dist = int(round(abs(prev_y - global_transform.origin[1])))
 	if fall_dist >= 20 && impact_velocity >= 45: 
 		jump_press = false
 		sfx.PlayLandHurt()
@@ -166,7 +170,9 @@ GroundMove
 ===============
 """
 func GroundMove():
-	var wishdir = transform.basis.x.slide(ground_normal) * smove + -transform.basis.z.slide(ground_normal) * fmove
+	var wishdir : Vector3
+	
+	wishdir = transform.basis.x.slide(ground_normal) * smove + -transform.basis.z.slide(ground_normal) * fmove
 	wishdir = wishdir.normalized()
 	
 	GroundAccelerate(wishdir, movespeed)
@@ -190,15 +196,20 @@ StepMove
 ===============
 """
 func StepMove(original_pos):
+	var dest : Vector3
+	var up : Vector3
+	var down : Vector3
+	var trace
+	
 	# Get destination position that is one step-size above the intended move
-	var dest = original_pos
+	dest = original_pos
 	dest[0] += velocity[0] * deltaTime
 	dest[1] += STEPSIZE
 	dest[2] += velocity[2] * deltaTime
 	
 	# 1st Trace: check for collisions one stepsize above the original position
-	var up = original_pos + Vector3.UP * STEPSIZE
-	var trace = Trace.normal(original_pos, up, collider.shape, self)
+	up = original_pos + Vector3.UP * STEPSIZE
+	trace = Trace.normal(original_pos, up, collider.shape, self)
 	dest[1] = trace[0][1]
 	
 	# 2nd Trace: Check for collisions from the 1st trace end position
@@ -206,7 +217,7 @@ func StepMove(original_pos):
 	trace = Trace.normal(trace[0], dest, collider.shape, self)
 	
 	# 3rd Trace: Check for collisions below the 2nd trace end position
-	var down = Vector3(trace[0][0], original_pos[1], trace[0][2])
+	down = Vector3(trace[0][0], original_pos[1], trace[0][2])
 	trace = Trace.normal(trace[0], down, collider.shape, self)
 	
 	# Move to trace collision position if step is higher than original position and not steep 
@@ -221,7 +232,10 @@ AirMove
 ===============
 """
 func AirMove():
-	var wishdir = transform.basis.x.slide(ground_normal) * smove + -transform.basis.z.slide(ground_normal) * fmove
+	var wishdir : Vector3
+	var collision
+	
+	wishdir = transform.basis.x.slide(ground_normal) * smove + -transform.basis.z.slide(ground_normal) * fmove
 	wishdir = wishdir.normalized()
 	#wishdir[1] = 0.0
 	
@@ -237,7 +251,7 @@ func AirMove():
 	
 	impact_velocity = abs(int(round(velocity[1])))
 	
-	var collision = move_and_collide(velocity * deltaTime) 
+	collision = move_and_collide(velocity * deltaTime) 
 	if collision:
 		velocity = velocity.slide(collision.get_normal())
 
@@ -319,10 +333,6 @@ func GroundAccelerate(wishdir, wishspeed):
 		velocity = velocity.linear_interpolate(wishdir * wishspeed, accel * deltaTime) 
 	else:
 		velocity = velocity.linear_interpolate(Vector3.ZERO, friction * deltaTime) 
-	
-	# Don't bother with tiny velocities
-	if velocity.length() < 0.1:
-		velocity = Vector3.ZERO
 
 #"""
 #===============

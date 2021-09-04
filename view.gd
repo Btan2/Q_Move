@@ -83,6 +83,7 @@ const y_offset : float = 1.25           # default: 1.0
 
 enum { VB_COS, VB_SIN, VB_COS2, VB_SIN2 }
 const bob_mode = VB_SIN
+#const EPSILON_F = 0.00001
 
 """
 ===============
@@ -103,9 +104,6 @@ func _input(event):
 	if event is InputEventMouseMotion:
 		moved = true
 		mouse_move = lerp(mouse_move, event.relative * mouse_sensitivity, 15 * deltaTime)
-#		mouse_move.x = event.relative.x * mouse_sensitivity
-#		mouse_move.y = event.relative.y * mouse_sensitivity
-		
 		mouse_rotation_x -= event.relative.y * mouse_sensitivity
 		mouse_rotation_x = clamp(mouse_rotation_x, -90, 90)
 		player.rotate_y(deg2rad(-event.relative.x * mouse_sensitivity))
@@ -137,7 +135,7 @@ func _physics_process(delta):
 	VelocityRoll()
 	ViewModelSway()
 	
-	if player.velocity == Vector3.ZERO:
+	if player.velocity.length() <= 0.1:
 		bobtimes = [0,0,0]
 		Q_bobtime = 0.0
 		
@@ -182,17 +180,20 @@ Lerp weapon origin & angle while moving the mouse
 ===============
 """
 func ViewModelSway():
+	var pos : Vector3
+	var rot : Vector3
+	
 	if !moved:
 		mouse_move = mouse_move.linear_interpolate(Vector2.ZERO, 1 * deltaTime)
 	
 	moved = false
 	
-	var pos = Vector3.ZERO 
+	pos = Vector3.ZERO 
 	pos.x = clamp(-mouse_move.x * swayPos_offset, -swayPos_max, swayPos_max)
 	pos.y = clamp(mouse_move.y * swayPos_offset, -swayPos_max, swayPos_max)
 	swayPos = lerp(swayPos, pos, swayPos_speed * deltaTime)
 	
-	var rot = Vector3.ZERO
+	rot = Vector3.ZERO
 	rot.x = clamp(-mouse_move.y * swayRoll_angle, -swayRoll_max, swayRoll_max)
 	rot.y = clamp(-mouse_move.x * swayRoll_angle, -swayRoll_max, swayRoll_max)
 	swayRoll = lerp(swayRoll, rot, swayRoll_speed * deltaTime)
@@ -206,7 +207,9 @@ VelocityRoll
 ===============
 """
 func VelocityRoll():
-	var side = CalcRoll(player.velocity, rollangles, rollspeed) * 4;
+	var side : float
+	
+	side = CalcRoll(player.velocity, rollangles, rollspeed) * 4;
 	camera.rotation_degrees.z += side
 	viewmodel.rotation_degrees.z = side * tiltextra
 
@@ -311,8 +314,8 @@ Quake bob
 ===============
 """
 func Q_CalcBob():
-	var vel        : Vector3
-	var cycle      : float
+	var vel : Vector3
+	var cycle : float
 	
 	if player.state != 0: 
 		return Q_bob
@@ -416,6 +419,7 @@ Trigger view kicks
 """
 func ParseDamage(from):
 	var side : float
+	
 	side = from.dot(-get_global_transform().basis.z)
 	v_dmg_roll = side * kick_amount
 	side = from.dot(get_global_transform().basis.x)

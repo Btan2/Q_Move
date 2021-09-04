@@ -49,8 +49,11 @@ func _ready() -> void:
 	
 	feet_arr = feet_concrete
 	jump_arr = jump_concrete
+	
 	landhurt = preload("res://audio/land_hurt.ogg")
 	env.stream = preload("res://audio/windfall_1.ogg")
+	
+	last_position = player.global_transform.origin
 
 """
 ===============
@@ -58,7 +61,9 @@ _process
 ===============
 """
 func _process(_delta):
-	var vel = abs(player.velocity.length())
+	var vel : float
+	
+	vel = abs(player.velocity.length())
 	
 	PlayWindrush(vel)
 	
@@ -96,6 +101,7 @@ func PlayFootstep(vel):
 	var position : Vector3
 	var step_threshold : float
 	var halfspeed : float
+	
 	# Get horizontal distance from move
 	position = player.global_transform.origin
 	position[1] = 0.0
@@ -156,18 +162,8 @@ func PlayLandHurt() -> void:
 	jump.stream = landhurt
 	jump.play()
 
-#DB/LINEAR conversions
-# Footsteps:
-# -10.0 = 0.316228
-# -30.0 = 0.031623
-# Falling:
-# -3.0 = 0.7 
-# -20.0 = 0.1
-
-
 ##################################################################################
-# Works well but sinewave is causing harsh audio pop/crack sound when first played
-# Need to ease in sine wave somehow
+# Works well but causes harsh audio pop/crack sound when first played
 #################################################
 #func PlayFootstep(vel, delta) -> void:
 #	if vel < 0.01:
