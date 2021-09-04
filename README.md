@@ -9,16 +9,13 @@ A generalised description on how the step function works can be found on my webs
 NOTE: Website is currently under construction so it may contain broken links or text/heading alignment errors.
 
 # Features
-  - Various functions from Quake source code converted into GDScript
-  - Proper step climbing; no invisible ramps or other inefficient trickery used
-  - Trace function addon for collision shape detection
-  - Air control and acceleration, modified from WiggleWizards Quake3 Movement script (https://github.com/WiggleWizard/quake3-movement-unity3d)
-  - Jump hang to make jumping precision more lax or difficult
-  - Classic head-bob and view-rolling functions from Quake source code
-  - Optional modern head-bob from Admer456's "Better View Bobbing" tutorial (https://gamebanana.com/tuts/12972)
-  - Weapon-bob and roll
-  - Weapon look sway in a similar vein to Half-Life 2
-  - Idle weapon and view sway
+  - Various functions from Quake source code have been converted into GDScript, such as head-bob and camera movement rolling to name a few. 
+  - Air control and acceleration was taken and modified from WiggleWizard's Quake3 Movement script (https://github.com/WiggleWizard/quake3-movement-unity3d).
+  - Optional modern style head-bob converted from Admer456's "Better View Bobbing" tutorial (https://gamebanana.com/tuts/12972).
+  - Proper step climbing; no invisible ramps or other trickery used.
+  - Trace function addon for collision shape casting (used for step detection).
+  - Jump hang to enable allow more forgiving jumping precision off ledges.
+  - More standard FPS features to be added to the project over time.
 
 # Current Issues
   - 'move_and_slide' produces occasional buggy movement if the velocity is clipped at ANY point during the move. This is an ongoing issue with Godot at the moment.
