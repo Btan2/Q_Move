@@ -83,7 +83,6 @@ func _physics_process(delta):
 		GroundMove()
 	else:
 		AirMove()
-	
 
 """
 ===============
@@ -141,7 +140,8 @@ JumpButton
 ===============
 """
 func JumpButton():
-	if is_dead: return
+	if is_dead: 
+		return
 	
 	# Allow jump for a few frames if just ran off platform
 	if state != FALLING:
@@ -149,7 +149,9 @@ func JumpButton():
 	else:
 		hangtime -= deltaTime if hangtime > 0.0 else 0.0
 	
-	if velocity[1] > 54.0: return
+	# Moving up too fast, don't jump
+	if velocity[1] > 54.0: 
+		return
 	
 	if hangtime > 0.0 and jump_press:
 		state = FALLING
@@ -159,7 +161,7 @@ func JumpButton():
 		sfx.PlayJump()
 		
 		# Make sure jump velocity is positive if falling
-		if state == FALLING || velocity[1] < 0.0:
+		if state == FALLING or velocity[1] < 0.0:
 			velocity[1] = JUMPFORCE
 		else:
 			velocity[1] += JUMPFORCE
@@ -171,45 +173,46 @@ GroundMove
 """
 func GroundMove():
 	var wishdir : Vector3
+	var collision
 	
 	wishdir = transform.basis.x.slide(ground_normal) * smove + -transform.basis.z.slide(ground_normal) * fmove
 	wishdir = wishdir.normalized()
 	
 	GroundAccelerate(wishdir, movespeed)
 	
-	#var original_vel = velocity
-	
-	move_and_slide(velocity)
-	
-	# Don't move up steps if dead
-	if is_dead : return 
-	
-	for i in range(get_slide_count()):
-		if get_slide_collision(i).normal[1] < 0.7:
-			StepMove(global_transform.origin)
-	
-	#velocity = original_vel
+	var ccd_max = 5
+	for _i in range(ccd_max):
+		var ccd_step = velocity / ccd_max
+		collision = move_and_collide(ccd_step * deltaTime)
+		if collision:
+			var normal = collision.get_normal()
+			var stepped = false
+			if normal[1] < 0.7 and !is_dead:
+				stepped = StepMove(global_transform.origin, velocity)
+			if !stepped:
+				velocity = velocity.slide(normal)
 
 """
 ===============
 StepMove
 ===============
 """
-func StepMove(original_pos):
+func StepMove(original_pos : Vector3, vel : Vector3):
 	var dest : Vector3
-	var up : Vector3
 	var down : Vector3
+	var up   : Vector3
 	var trace
 	
 	# Get destination position that is one step-size above the intended move
 	dest = original_pos
-	dest[0] += velocity[0] * deltaTime
+	dest[0] += vel[0] * deltaTime
 	dest[1] += STEPSIZE
-	dest[2] += velocity[2] * deltaTime
+	dest[2] += vel[2] * deltaTime
 	
 	# 1st Trace: check for collisions one stepsize above the original position
 	up = original_pos + Vector3.UP * STEPSIZE
 	trace = Trace.normal(original_pos, up, collider.shape, self)
+	
 	dest[1] = trace[0][1]
 	
 	# 2nd Trace: Check for collisions from the 1st trace end position
@@ -223,8 +226,11 @@ func StepMove(original_pos):
 	# Move to trace collision position if step is higher than original position and not steep 
 	if trace[0][1] > original_pos[1] and trace[1][1] >= 0.7: 
 		global_transform.origin = trace[0]
+		velocity = velocity.slide(trace[1])
+		return true
 	
-	velocity = velocity.slide(trace[1])
+	# Step is too steep or level with current position
+	return false
 
 """
 ===============
@@ -251,9 +257,12 @@ func AirMove():
 	
 	impact_velocity = abs(int(round(velocity[1])))
 	
-	collision = move_and_collide(velocity * deltaTime) 
-	if collision:
-		velocity = velocity.slide(collision.get_normal())
+	var ccd_max = 5
+	for _i in range(ccd_max):
+		var ccd_step = velocity / ccd_max
+		collision = move_and_collide(ccd_step * deltaTime) 
+		if collision:
+			velocity = velocity.slide(collision.get_normal())
 
 """
 ===============
@@ -261,13 +270,14 @@ AirAccelerate
 ===============
 """
 func AirAccelerate(wishdir, accel):
-	var addspeed : float
-	var accelspeed : float
+	var addspeed     : float
+	var accelspeed   : float
 	var currentspeed : float
 	
 	currentspeed = velocity.dot(wishdir)
 	addspeed = movespeed - currentspeed
-	if addspeed <= 0.0: return
+	if addspeed <= 0.0: 
+		return
 	
 	accelspeed = accel * deltaTime * movespeed
 	if accelspeed > addspeed: accelspeed = addspeed
@@ -282,15 +292,20 @@ AirControl
 ===============
 """
 func AirControl(wishdir):
-	if fmove == 0.0: return
+	var dot        : float
+	var speed      : float
+	var original_y : float
 	
-	var original_y = velocity[1]
+	if fmove == 0.0: 
+		return
+	
+	original_y = velocity[1]
 	velocity[1] = 0.0
-	var speed = velocity.length()
+	speed = velocity.length()
 	velocity = velocity.normalized()
 	
 	# Change direction while slowing down
-	var dot = velocity.dot(wishdir)
+	dot = velocity.dot(wishdir)
 	if dot > 0.0 :
 		var k = 32.0 * AIRCONTROL * dot * dot * deltaTime
 		velocity[0] = velocity[0] * speed + wishdir[0] * k
@@ -301,7 +316,6 @@ func AirControl(wishdir):
 	velocity[0] *= speed
 	velocity[1] = original_y
 	velocity[2] *= speed
-	
 
 """
 ===============
@@ -309,9 +323,11 @@ GroundAccelerate
 ===============
 """
 func GroundAccelerate(wishdir, wishspeed):
-	var accel = ACCELERATE
-	var friction = MOVEFRICTION
-	var speed = velocity.length()
+	var friction : float
+	var speed    : float 
+	
+	friction = MOVEFRICTION
+	speed = velocity.length()
 	
 	if state == LADDER:
 		friction = 30.0
@@ -330,81 +346,6 @@ func GroundAccelerate(wishdir, wishspeed):
 	
 	# Friction applied after move release
 	if wishdir != Vector3.ZERO:
-		velocity = velocity.linear_interpolate(wishdir * wishspeed, accel * deltaTime) 
+		velocity = velocity.linear_interpolate(wishdir * wishspeed, ACCELERATE * deltaTime) 
 	else:
 		velocity = velocity.linear_interpolate(Vector3.ZERO, friction * deltaTime) 
-
-#"""
-#===============
-#Friction
-#===============
-#"""
-#func Friction():
-#	var speed : float
-#	var newspeed : float
-#	var control : float
-#	var friction : float
-#	var drop : float
-#	var trace
-#
-#	speed = velocity.length()
-#	if speed <= 0:
-#		return
-#
-#	friction = MOVEFRICTION
-#
-#	# if the leading edge is over a dropoff, increase friction
-#	if state == GROUNDED: 
-#		var start = transform.origin
-#		var stop = Vector3.ZERO
-#		start[0] += velocity[0]/speed*1.6
-#		stop[0] = start[0]
-#		start[2] += velocity[2]/speed*1.6
-#		stop[2] = start[2]
-#		stop[1] = start[1] - 3.4
-#
-#		trace = Trace.fraction(start, stop, collider.shape, self)
-#
-#		if trace == 1:
-#			friction *= 2
-#
-#	drop = 0
-#	if state == GROUNDED:
-#		if speed < STOPSPEED:
-#			control = STOPSPEED
-#		else:
-#			control = speed
-#
-#		drop += control * friction * deltaTime
-#
-#	newspeed = speed - drop
-#	if newspeed < 0:
-#		newspeed = 0
-#	newspeed /= speed
-#
-#	velocity[0] *= newspeed
-#	velocity[1] *= newspeed
-#	velocity[2] *= newspeed
-#
-#"""
-#===============
-#Accelerate
-#===============
-#"""
-#func Accelerate(wishdir, wishspeed, accel):
-#	var addspeed : float
-#	var accelspeed : float
-#	var currentspeed : float
-#
-#	currentspeed = velocity.dot(wishdir)
-#	addspeed = wishspeed - currentspeed
-#	if addspeed <= 0:
-#		return
-#
-#	accelspeed = accel * deltaTime * wishspeed
-#	if accelspeed > addspeed:
-#		accelspeed = addspeed
-#
-#	velocity[0] += accelspeed * wishdir[0]
-#	velocity[1] += accelspeed * wishdir[1]
-#	velocity[2] += accelspeed * wishdir[2]

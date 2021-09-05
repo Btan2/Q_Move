@@ -83,7 +83,6 @@ const y_offset : float = 1.25           # default: 1.0
 
 enum { VB_COS, VB_SIN, VB_COS2, VB_SIN2 }
 const bob_mode = VB_SIN
-#const EPSILON_F = 0.00001
 
 """
 ===============
@@ -107,7 +106,7 @@ func _input(event):
 		mouse_rotation_x -= event.relative.y * mouse_sensitivity
 		mouse_rotation_x = clamp(mouse_rotation_x, -90, 90)
 		player.rotate_y(deg2rad(-event.relative.x * mouse_sensitivity))
-		
+	
 	if Input.is_key_pressed(KEY_P):
 		TriggerShake(5.0)
 
@@ -147,9 +146,10 @@ func _physics_process(delta):
 		
 		AddBob()
 		if newbob:
-			ViewBobNew()
+			ViewBobModern()
 		else:
-			ViewBob()
+			ViewBobClassic()
+		
 		ViewModelBob()
 	
 	# Smooth out stair step ups
@@ -289,11 +289,11 @@ func ViewModelBob():
 
 """
 ===============
-ViewBobNew
-More modern head bob
+ViewBobModern
+Modern style head-bob
 ===============
 """
-func ViewBobNew():
+func ViewBobModern():
 	camera.rotation_degrees.z += bobRight * 0.8
 	camera.rotation_degrees.y -= bobUp * 0.8
 	camera.rotation_degrees.x += bobRight * 1.2
@@ -301,19 +301,18 @@ func ViewBobNew():
 """
 ===============
 ViewBob
-Original Quake bob
+Classic Quake head-bob
 ===============
 """
-func ViewBob():
-	transform.origin[1] += Q_CalcBob()
+func ViewBobClassic():
+	transform.origin[1] += CalcBobClassic()
 
 """
 ===============
-Q_CalcBob
-Quake bob
+CalcBobClassic
 ===============
 """
-func Q_CalcBob():
+func CalcBobClassic():
 	var vel : Vector3
 	var cycle : float
 	
@@ -338,7 +337,6 @@ func Q_CalcBob():
 """
 ===============
 CalcBob
-Quakeworld bob code
 ===============
 """
 func CalcBob (freqmod: float, mode, bob_i: int, bob: float):

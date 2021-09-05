@@ -40,8 +40,10 @@ func normal(origin, dest, shape, e):
 		var fraction = results[0]
 		endpos = origin + (dest - origin).normalized() * (origin.distance_to(dest) * fraction)
 	else:
-		#fraction = 1
 		endpos = dest
+		
+		# Didn't hit anything
+		return false
 	
 	# Set next parameter position to endpos
 	params.transform.origin = endpos
