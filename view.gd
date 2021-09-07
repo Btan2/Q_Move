@@ -54,7 +54,7 @@ var tiltextra : float = 2.0           # default: 2.0
 var swayPos_offset : float = 0.12     # default: 0.12
 var swayPos_max : float = 0.5        # default: 0.1
 var swayPos_speed : float = 7.0       # default: 9.0
-var swayRoll_angle : float = 2.0      # default: 5.0   (old default: Vector3(5.0, 5.0, 2.0))
+var swayRoll_angle : float = 5.0      # default: 5.0   (old default: Vector3(5.0, 5.0, 2.0))
 var swayRoll_max : float = 10.0       # default: 15.0  (old default: Vector3(12.0, 12.0, 4.0))
 var swayRoll_speed : float = 2.0     # default: 10.0
 
@@ -79,7 +79,7 @@ var mouse_sensitivity : float = 0.1
 
 const kick_time : float = 0.5           # default: 0.5
 const kick_amount : float = 0.6         # default: 0.6
-const y_offset : float = 1.25           # default: 1.0
+var y_offset : float = 1.25           # default: 1.0
 
 enum { VB_COS, VB_SIN, VB_COS2, VB_SIN2 }
 const bob_mode = VB_SIN
@@ -192,14 +192,14 @@ func ViewModelSway():
 	pos.x = clamp(-mouse_move.x * swayPos_offset, -swayPos_max, swayPos_max)
 	pos.y = clamp(mouse_move.y * swayPos_offset, -swayPos_max, swayPos_max)
 	swayPos = lerp(swayPos, pos, swayPos_speed * deltaTime)
-	
-	rot = Vector3.ZERO
-	rot.x = clamp(-mouse_move.y * swayRoll_angle, -swayRoll_max, swayRoll_max)
-	rot.y = clamp(-mouse_move.x * swayRoll_angle, -swayRoll_max, swayRoll_max)
-	swayRoll = lerp(swayRoll, rot, swayRoll_speed * deltaTime)
-	
 	viewmodel.transform.origin += swayPos
-	viewmodel.rotation_degrees += swayRoll
+	
+	#rot = Vector3.ZERO
+	#rot.x = clamp(-mouse_move.y * swayRoll_angle, -swayRoll_max, swayRoll_max)
+	##rot.z = clamp(mouse_move.x * swayRoll_angle, -swayRoll_max, swayRoll_max)
+	#rot.y = clamp(-mouse_move.x * swayRoll_angle, -swayRoll_max, swayRoll_max)
+	#swayRoll = lerp(swayRoll, rot, swayRoll_speed * deltaTime)
+	#viewmodel.rotation_degrees += swayRoll
 
 """
 ===============

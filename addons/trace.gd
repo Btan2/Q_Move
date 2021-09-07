@@ -1,7 +1,10 @@
 extends Spatial
 
 """
-Collision Fraction Trace
+===============
+fraction
+Returns distance fraction
+===============
 """
 func fraction(origin, dest, shape, e):
 	# Create collision parameters
@@ -20,7 +23,41 @@ func fraction(origin, dest, shape, e):
 		return 1
 
 """
-Collision Normal Trace
+===============
+group
+Returns collision groups and collider
+===============
+"""
+func group(origin : Vector3, shape, e):
+	var params : PhysicsShapeQueryParameters
+	var space_state
+	var results
+	var groups = []
+	var colliders = []
+	
+	params = PhysicsShapeQueryParameters.new()
+	params.set_shape(shape)
+	params.transform.origin = origin
+	params.collide_with_bodies = true
+	params.exclude = [e]
+	
+	space_state = get_world().direct_space_state
+	results = space_state.intersect_shape(params, 8)
+	
+	if !results.empty():
+		for r in results:
+			var group = r.get("collider").get_groups()
+			if len(group) > 0:
+				colliders.append(r.get("collider"))
+				groups.append(group)
+	
+	return Array([groups, colliders])
+
+"""
+===============
+normal
+Returns surface normal and end position
+===============
 """
 func normal(origin, dest, shape, e):
 	var endpos : Vector3 #[0]
@@ -58,7 +95,11 @@ func normal(origin, dest, shape, e):
 	return Array([endpos, normal])
 
 """
-Collision Normal & Fraction Trace
+===============
+normalfrac
+Returns distance fraction, surface normal and
+end position
+===============
 """
 func normalfrac(origin, dest, shape, e):
 	var fraction : float #[0]
@@ -96,7 +137,11 @@ func normalfrac(origin, dest, shape, e):
 
 
 """
-Full Collision Trace
+===============
+full
+Returns distance fraction, end position, surface normal 
+and collision group
+===============
 """
 func full(origin, dest, shape, e):
 	var fraction : float   #[0]

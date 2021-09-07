@@ -77,12 +77,12 @@ Air rush sfx while moving/falling at high speed
 ===============
 """
 func PlayWindrush(vel):
-	if vel > 42.0:
+	if vel > 55.0:
 		if !env.playing:
 			env.play()
 		
 		# Increase volume and pitch while falling
-		var fallspeed = vel - 42.0
+		var fallspeed = vel - 55.0
 		env.pitch_scale = clamp(fallspeed / 150, 0.001, 1.5)
 		var volume = clamp(fallspeed / 100 * 0.7, 0.1, 0.7)
 		env.set_volume_db(linear2db(volume))
@@ -112,11 +112,16 @@ func PlayFootstep(vel):
 	step_threshold = run_threshold if vel > halfspeed else walk_threshold
 	
 	if step_distance > step_threshold:
-		var volume = clamp(vel / player.MAXSPEED * 0.5, 0.2, 0.5) * footstep_volume
+		step_distance = 0.0
+		
+		# Don't play footstep if sneaking
+		if player.crouch_press and player.movespeed < player.WALKSPEED:
+			return
+		
+		var volume = clamp(vel / player.MAXSPEED * 0.5, 0.1, 0.5) * footstep_volume
 		feet.set_volume_db(linear2db(volume))
 		feet.stream = RandomFootstep()
 		feet.play()
-		step_distance = 0.0
 
 """
 ===============

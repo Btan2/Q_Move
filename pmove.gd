@@ -24,16 +24,20 @@ const JUMPFORCE : float = 27.0       # default: 27.0
 const AIRCONTROL : float = 0.9       # default: 0.9
 const STEPSIZE : float = 1.8         # default: 1.8
 const MAXHANG : float = 0.2          # defualt: 0.2
+const PLAYER_HEIGHT : float = 3.6
+const CROUCH_HEIGHT : float = 2.0
 
 var deltaTime : float = 0.0
 var movespeed : float = 32.0
 var fmove : float = 0.0
 var smove : float = 0.0
 var ground_normal : Vector3 = Vector3.UP
+var ladder_normal : Vector3 = Vector3.UP
 var hangtime : float = 0.2
 var impact_velocity : float = 0.0
 var is_dead : bool = false
 var jump_press : bool = false
+var crouch_press : bool = false
 var prev_y : float = 0.0
 var velocity : Vector3 = Vector3.ZERO
 
@@ -67,6 +71,15 @@ func _input(_event):
 	elif Input.is_action_just_released("jump"):
 		jump_press = false
 	
+	if Input.is_action_pressed("crouch"):
+		crouch_press = true
+		if movespeed == MAXSPEED:
+			movespeed = WALKSPEED
+		else:
+			movespeed = WALKSPEED / 2.0
+	else:
+		crouch_press = false
+	
 
 """
 ===============
@@ -74,15 +87,49 @@ _physics_process
 ===============
 """
 func _physics_process(delta):
+	$Label.text = ""
+	
 	deltaTime = delta
 	
+	Crouch()
 	CategorizePosition()
+	LadderCheck()
 	JumpButton()
 	
-	if state == GROUNDED:
-		GroundMove()
+	match(state):
+		LADDER:
+			$Label.text += "Ladder"
+			LadderMove()
+		GROUNDED:
+			$Label.text += "Grounded"
+			GroundMove()
+		FALLING:
+			$Label.text += "Falling"
+			AirMove()
+
+"""
+===============
+Crouch
+===============
+"""
+func Crouch():
+	var crouch_speed = 20.0 * deltaTime
+	
+	if crouch_press:
+		# snap crouch height while falling
+		if state == FALLING:
+			collider.shape.height = CROUCH_HEIGHT
+		else:
+			collider.shape.height -= crouch_speed 
 	else:
-		AirMove()
+		if collider.shape.height < PLAYER_HEIGHT:
+			var dest = transform.origin + Vector3.UP * crouch_speed
+			var fraction = Trace.fraction(transform.origin, dest, collider.shape, self)
+			if fraction == 1:
+				collider.shape.height += crouch_speed
+	
+	collider.shape.height = clamp(collider.shape.height, CROUCH_HEIGHT, PLAYER_HEIGHT)
+	head.y_offset = collider.shape.height * 0.35
 
 """
 ===============
@@ -257,12 +304,12 @@ func AirMove():
 	
 	impact_velocity = abs(int(round(velocity[1])))
 	
-	var ccd_max = 5
-	for _i in range(ccd_max):
-		var ccd_step = velocity / ccd_max
-		collision = move_and_collide(ccd_step * deltaTime) 
-		if collision:
-			velocity = velocity.slide(collision.get_normal())
+#	var ccd_max = 5
+#	for _i in range(ccd_max):
+#		var ccd_step = velocity / ccd_max
+	collision = move_and_collide(velocity * deltaTime) 
+	if collision:
+		velocity = velocity.slide(collision.get_normal())
 
 """
 ===============
@@ -333,7 +380,7 @@ func GroundAccelerate(wishdir, wishspeed):
 		friction = 30.0
 	elif speed > 0.0:
 		# If the leading edge is over a dropoff, increase friction
-		var start = transform.origin
+		var start = global_transform.origin
 		start[0] += velocity[0] / speed * 1.6
 		start[2] += velocity[2] / speed * 1.6
 		var stop = Vector3.ZERO
@@ -349,3 +396,87 @@ func GroundAccelerate(wishdir, wishspeed):
 		velocity = velocity.linear_interpolate(wishdir * wishspeed, ACCELERATE * deltaTime) 
 	else:
 		velocity = velocity.linear_interpolate(Vector3.ZERO, friction * deltaTime) 
+
+"""
+===============
+LadderCheck
+===============
+"""
+func LadderCheck():
+	var groups
+	var colliders
+	var ladder_obj
+	var on_ladder : bool
+	var shape : CylinderShape
+	var trace
+	
+	if crouch_press: 
+		return
+	
+	on_ladder = false
+	
+	# Use a slightly thicker version of player cylinder for ladder detection
+	shape = CylinderShape.new()
+	shape.radius = float(collider.shape.radius + 0.05)
+	shape.height = float(collider.shape.height)
+	shape.margin = float(collider.shape.margin)
+	
+	trace = Trace.group(global_transform.origin, shape, self)
+	groups = trace[0]
+	colliders = trace[1]
+	
+	if len(groups) > 0:
+		for i in range(len(groups)):
+			for g in groups[i]:
+				if (g == "LADDER_METAL" or g == "LADDER_WOOD") and !on_ladder:
+					on_ladder = true
+					ladder_obj = colliders[i].get_parent()
+					break
+	
+	if on_ladder:
+		ladder_normal = -ladder_obj.global_transform.basis.z.normalized()
+		
+		# Get closest point on player's cylinder to ladder plane
+		var ladder_edge = ladder_obj.global_transform.origin + ladder_normal * ladder_obj.scale.z
+		var player_edge = global_transform.origin - ladder_normal * 1.0
+		player_edge[1] = ladder_edge[1] 
+		
+		# Normal movement if standing on the tip of ladder
+		var dir_to_edge = (player_edge - ladder_edge).normalized()
+		if ladder_normal.dot(dir_to_edge) < 0:
+			return
+		
+		# Check if moving away from ladder
+		var dir = (transform.basis.x * smove + -transform.basis.z * fmove).normalized()
+		var moving_off = dir.dot(ladder_normal) > 0
+		
+		# Move away while touching stable ground
+		if moving_off and state == GROUNDED: 
+			return
+		
+		# Jump away from ladder
+		if moving_off and jump_press:
+			velocity = dir * 10.0
+			ground_normal = Vector3.UP
+			return
+		
+		state = LADDER
+
+"""
+===============
+LadderMove
+===============
+"""
+func LadderMove():
+	var wishdir = (transform.basis.x * smove + -head.camera.global_transform.basis.z * fmove).normalized()
+	wishdir = wishdir.slide(ladder_normal)
+	GroundAccelerate(wishdir, movespeed/2.0)
+	
+	# warning-ignore:return_value_discarded
+	move_and_slide(velocity)
+#	var collision = move_and_collide(velocity * deltaTime) 
+#	if collision:
+#		velocity = velocity.slide(collision.get_normal())
+	
+	prev_y = transform.origin[1]
+	impact_velocity = 0
