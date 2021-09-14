@@ -24,11 +24,56 @@ func fraction(origin, dest, shape, e):
 
 """
 ===============
-group
-Returns collision groups and collider
+rest_normal
 ===============
 """
-func group(origin : Vector3, shape, e):
+func rest_normal(origin : Vector3, shape, e, mask):
+	var params
+	var space_state
+	
+	params = PhysicsShapeQueryParameters.new()
+	params.set_shape(shape)
+	params.set_collision_mask(mask)
+	params.transform.origin = origin
+	params.collide_with_bodies = true
+	params.exclude = [e]
+	
+	space_state = get_world().direct_space_state
+	return space_state.get_rest_info(params)
+
+"""
+===============
+intersect
+===============
+"""
+func intersect(origin : Vector3, shape, e, mask):
+	var params : PhysicsShapeQueryParameters
+	var space_state
+	var results
+	
+	params = PhysicsShapeQueryParameters.new()
+	params.set_shape(shape)
+	params.transform.origin = origin
+	params.collide_with_bodies = true
+	params.exclude = [e]
+	params.set_collision_mask(mask)
+	
+	space_state = get_world().direct_space_state
+	results = space_state.intersect_shape(params, 8)
+	
+	if !results.empty():
+		return true
+	
+	return false
+
+"""
+===============
+group
+Returns collision groups and collider
+NOTE: Uses intersect_shape, so it passes through collision objects
+===============
+"""
+func group(origin : Vector3, shape, e, mask):
 	var params : PhysicsShapeQueryParameters
 	var space_state
 	var results
@@ -40,6 +85,7 @@ func group(origin : Vector3, shape, e):
 	params.transform.origin = origin
 	params.collide_with_bodies = true
 	params.exclude = [e]
+	params.set_collision_mask(mask)
 	
 	space_state = get_world().direct_space_state
 	results = space_state.intersect_shape(params, 8)
@@ -69,6 +115,7 @@ func normal(origin, dest, shape, e):
 	params.transform.origin = origin
 	params.collide_with_bodies = true
 	params.exclude = [e]
+	#params.set_collision_mask(mask)
 	
 	# Get distance fraction and position of first collision
 	var space_state = get_world().direct_space_state

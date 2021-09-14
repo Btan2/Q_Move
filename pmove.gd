@@ -4,9 +4,8 @@ extends KinematicBody
 pmove.gd
 
 - Player movement controller
-- Player will still slide down slopes. Please fix this issue Godot!
-- Only tested with simple 3D shapes such as boxes and spheres.
-- "move_and_slide" is causing buggy velocity clipping when moving against vertical walls and concave surfaces.
+- Player will still slide down slopes
+- Only tested with simple 3D shapes such as boxes and spheres
 """
 
 onready var collider : CollisionShape = $CollisionShape
@@ -44,12 +43,14 @@ var velocity : Vector3 = Vector3.ZERO
 enum {GROUNDED, FALLING, LADDER, SWIMMING, NOCLIP}
 var state = GROUNDED
 
+const LADDER_LAYER = 2
+
 """
 ===============
 _input
 ===============
 """
-func _input(_event):
+func _input(event):
 	
 	if Input.is_key_pressed(KEY_K):
 		is_dead = true if !is_dead else false
@@ -87,7 +88,8 @@ _physics_process
 ===============
 """
 func _physics_process(delta):
-	$Label.text = ""
+	$Label.text = "\n"
+	$Label.text += "Velocity: " + str(velocity.length()) + "\n"
 	
 	deltaTime = delta
 	
@@ -95,16 +97,16 @@ func _physics_process(delta):
 	CategorizePosition()
 	LadderCheck()
 	JumpButton()
-	
+
 	match(state):
 		LADDER:
-			$Label.text += "Ladder"
+			#$Label.text += "Ladder" + "\n"
 			LadderMove()
 		GROUNDED:
-			$Label.text += "Grounded"
+			#$Label.text += "Grounded" + "\n"
 			GroundMove()
 		FALLING:
-			$Label.text += "Falling"
+			#$Label.text += "Falling" + "\n"
 			AirMove()
 
 """
@@ -183,6 +185,54 @@ func CalcFallDamage():
 
 """
 ===============
+LadderCheck
+===============
+"""
+func LadderCheck():
+	var on_ladder : bool
+	var shape : CylinderShape
+	var trace
+	
+	if crouch_press: 
+		return
+	
+	on_ladder = false
+	
+	# Use a slightly thicker version of player cylinder for ladder detection
+	shape = CylinderShape.new()
+	shape.radius = float(collider.shape.radius + 0.05)
+	shape.height = float(collider.shape.height)
+	shape.margin = float(collider.shape.margin)
+	
+	# Check if touching a ladder
+	on_ladder = Trace.intersect(global_transform.origin, shape, self, LADDER_LAYER)
+	
+	if on_ladder:
+		
+		# Get ladder normal
+		trace = Trace.rest_normal(global_transform.origin, shape, self, LADDER_LAYER)
+		if !trace.empty():
+			ladder_normal = trace.get("normal")
+		
+		# Check if moving away from the ladder
+		var dir = (transform.basis.x * smove + -transform.basis.z * fmove).normalized()
+		var move_off = dir.dot(ladder_normal) > 0
+		
+		# Move off ladder if touching stable ground
+		if move_off and state == GROUNDED: 
+			return
+		
+		# Jump away from ladder
+		if move_off and jump_press:
+			velocity = dir * 10.0
+			ground_normal = Vector3.UP
+			return
+		
+		#sfx.set_ground_type("LADDER_METAL")
+		state = LADDER
+
+"""
+===============
 JumpButton
 ===============
 """
@@ -221,11 +271,12 @@ GroundMove
 func GroundMove():
 	var wishdir : Vector3
 	var collision
+	wishdir = (global_transform.basis.x * smove + -global_transform.basis.z * fmove).normalized()
+	wishdir = wishdir.slide(ground_normal)
+	#wishdir = transform.basis.x.slide(ground_normal) * smove + -transform.basis.z.slide(ground_normal) * fmove
+	#wishdir = wishdir.normalized()
 	
-	wishdir = transform.basis.x.slide(ground_normal) * smove + -transform.basis.z.slide(ground_normal) * fmove
-	wishdir = wishdir.normalized()
-	
-	GroundAccelerate(wishdir, movespeed)
+	GroundAccelerate(wishdir, SlopeSpeed(ground_normal[1]))
 	
 	var ccd_max = 5
 	for _i in range(ccd_max):
@@ -238,6 +289,30 @@ func GroundMove():
 				stepped = StepMove(global_transform.origin, velocity)
 			if !stepped:
 				velocity = velocity.slide(normal)
+
+"""
+===============
+LadderMove
+===============
+"""
+func LadderMove():
+	var wishdir = (global_transform.basis.x * smove + -head.camera.global_transform.basis.z * fmove).normalized()
+	var forward_dir = wishdir.slide(Vector3.UP)
+	wishdir = wishdir.slide(ladder_normal)
+	
+	GroundAccelerate(wishdir, movespeed/2.0)
+	
+	var ccd_max = 5
+	for _i in range(ccd_max):
+		var ccd_step = velocity / ccd_max
+		var collision = move_and_collide(ccd_step * deltaTime)
+		if collision:
+			velocity = velocity.slide(collision.get_normal())
+	
+	StepMove(global_transform.origin, forward_dir * 4.0)
+	
+	prev_y = transform.origin[1]
+	impact_velocity = 0
 
 """
 ===============
@@ -276,8 +351,18 @@ func StepMove(original_pos : Vector3, vel : Vector3):
 		velocity = velocity.slide(trace[1])
 		return true
 	
-	# Step is too steep or level with current position
 	return false
+
+"""
+===============
+SlopeSpeed
+===============
+"""
+func SlopeSpeed(y_normal):
+	if y_normal <= 0.97:
+		var multiplier = y_normal if velocity[1] > 0.0 else 2.0 - y_normal
+		return clamp(movespeed * multiplier, 5.0, movespeed * 1.2)
+	return movespeed
 
 """
 ===============
@@ -290,6 +375,7 @@ func AirMove():
 	
 	wishdir = transform.basis.x.slide(ground_normal) * smove + -transform.basis.z.slide(ground_normal) * fmove
 	wishdir = wishdir.normalized()
+	
 	#wishdir[1] = 0.0
 	
 	AirAccelerate(wishdir, STOPSPEED if velocity.dot(wishdir) < 0 else AIRACCELERATE)
@@ -304,9 +390,6 @@ func AirMove():
 	
 	impact_velocity = abs(int(round(velocity[1])))
 	
-#	var ccd_max = 5
-#	for _i in range(ccd_max):
-#		var ccd_step = velocity / ccd_max
 	collision = move_and_collide(velocity * deltaTime) 
 	if collision:
 		velocity = velocity.slide(collision.get_normal())
@@ -385,7 +468,7 @@ func GroundAccelerate(wishdir, wishspeed):
 		start[2] += velocity[2] / speed * 1.6
 		var stop = Vector3.ZERO
 		stop[0] = start[0]
-		stop[1] = start[1] - 3.4
+		stop[1] = start[1] - 3.6
 		stop[2] = start[2]
 		var fraction = Trace.fraction(start, stop, collider.shape, self)
 		if fraction == 1:
@@ -397,86 +480,3 @@ func GroundAccelerate(wishdir, wishspeed):
 	else:
 		velocity = velocity.linear_interpolate(Vector3.ZERO, friction * deltaTime) 
 
-"""
-===============
-LadderCheck
-===============
-"""
-func LadderCheck():
-	var groups
-	var colliders
-	var ladder_obj
-	var on_ladder : bool
-	var shape : CylinderShape
-	var trace
-	
-	if crouch_press: 
-		return
-	
-	on_ladder = false
-	
-	# Use a slightly thicker version of player cylinder for ladder detection
-	shape = CylinderShape.new()
-	shape.radius = float(collider.shape.radius + 0.05)
-	shape.height = float(collider.shape.height)
-	shape.margin = float(collider.shape.margin)
-	
-	trace = Trace.group(global_transform.origin, shape, self)
-	groups = trace[0]
-	colliders = trace[1]
-	
-	if len(groups) > 0:
-		for i in range(len(groups)):
-			for g in groups[i]:
-				if (g == "LADDER_METAL" or g == "LADDER_WOOD") and !on_ladder:
-					on_ladder = true
-					ladder_obj = colliders[i].get_parent()
-					break
-	
-	if on_ladder:
-		ladder_normal = -ladder_obj.global_transform.basis.z.normalized()
-		
-		# Get closest point on player's cylinder to ladder plane
-		var ladder_edge = ladder_obj.global_transform.origin + ladder_normal * ladder_obj.scale.z
-		var player_edge = global_transform.origin - ladder_normal * 1.0
-		player_edge[1] = ladder_edge[1] 
-		
-		# Normal movement if standing on the tip of ladder
-		var dir_to_edge = (player_edge - ladder_edge).normalized()
-		if ladder_normal.dot(dir_to_edge) < 0:
-			return
-		
-		# Check if moving away from ladder
-		var dir = (transform.basis.x * smove + -transform.basis.z * fmove).normalized()
-		var moving_off = dir.dot(ladder_normal) > 0
-		
-		# Move away while touching stable ground
-		if moving_off and state == GROUNDED: 
-			return
-		
-		# Jump away from ladder
-		if moving_off and jump_press:
-			velocity = dir * 10.0
-			ground_normal = Vector3.UP
-			return
-		
-		state = LADDER
-
-"""
-===============
-LadderMove
-===============
-"""
-func LadderMove():
-	var wishdir = (transform.basis.x * smove + -head.camera.global_transform.basis.z * fmove).normalized()
-	wishdir = wishdir.slide(ladder_normal)
-	GroundAccelerate(wishdir, movespeed/2.0)
-	
-	# warning-ignore:return_value_discarded
-	move_and_slide(velocity)
-#	var collision = move_and_collide(velocity * deltaTime) 
-#	if collision:
-#		velocity = velocity.slide(collision.get_normal())
-	
-	prev_y = transform.origin[1]
-	impact_velocity = 0

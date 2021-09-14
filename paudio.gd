@@ -18,12 +18,16 @@ var feet_concrete = []
 var jump_concrete = []
 var feet_arr = []
 var jump_arr = []
-var footstep_volume : float = 0.5
+var footstep_volume : float = 0.25
 var jump_volume : float = 0.5
 var step_distance : float = 0.0
-var walk_threshold : float = 6.25
-var run_threshold : float = 8.5
 var last_position : Vector3 = Vector3.ZERO
+
+var foottime : float = 0.0
+var played_foot : bool = false
+
+enum {CONCRETE, GRASS, CARPET, TILE, WOOD, PUDDLE, WATER, SAND, ROCK, LADDER_METAL, LADDER_WOOD, ROPE, METAL, AIRVENT}
+var ground_type = CONCRETE
 
 var landhurt
 var r = RandomNumberGenerator.new()
@@ -54,13 +58,15 @@ func _ready() -> void:
 	env.stream = preload("res://audio/windfall_1.ogg")
 	
 	last_position = player.global_transform.origin
+	
+	foottime += 0.001
 
 """
 ===============
 _process
 ===============
 """
-func _process(_delta):
+func _process(delta):
 	var vel : float
 	
 	vel = abs(player.velocity.length())
@@ -69,6 +75,8 @@ func _process(_delta):
 	
 	if player.state == 0 or player.state == 2:
 		PlayFootstep(vel)
+	else:
+		foottime = 0.0
 
 """
 ===============
@@ -101,6 +109,11 @@ func PlayFootstep(vel):
 	var position : Vector3
 	var step_threshold : float
 	var halfspeed : float
+	var walk_threshold : float
+	var run_threshold : float
+	
+	walk_threshold = 6.25
+	run_threshold = 8.5
 	
 	# Get horizontal distance from move
 	position = player.global_transform.origin
@@ -118,7 +131,7 @@ func PlayFootstep(vel):
 		if player.crouch_press and player.movespeed < player.WALKSPEED:
 			return
 		
-		var volume = clamp(vel / player.MAXSPEED * 0.5, 0.1, 0.5) * footstep_volume
+		var volume = clamp(vel / player.MAXSPEED * 1.0, 0.1, 1.0) * footstep_volume
 		feet.set_volume_db(linear2db(volume))
 		feet.stream = RandomFootstep()
 		feet.play()
@@ -166,6 +179,35 @@ func PlayLandHurt() -> void:
 	jump.set_volume_db(linear2db(jump_volume))
 	jump.stream = landhurt
 	jump.play()
+
+"""
+===============
+SetGroundType
+Change footstep sfx based on ground type
+===============
+"""
+func SetGroundType(ground) -> void:
+	if ground_type != ground:
+		match(ground):
+			"GRASS":
+				pass
+#				feet_arr = feet_grass
+#				jump_arr = jump_grass
+			"TILES":
+				pass
+#				feet_arr = feet_tiles
+#				jump_arr = jump_tiles
+			"LADDER_METAL":
+				pass
+#				feet_arr = ladder_metal
+#				jump_arr = jump_metal
+			"CONCRETE":
+				feet_arr = feet_concrete
+				jump_arr = jump_concrete
+			_:
+				pass
+	
+	ground_type = ground
 
 ##################################################################################
 # Works well but causes harsh audio pop/crack sound when first played

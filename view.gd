@@ -9,7 +9,7 @@ view.gd
 """
 onready var camera = $Camera
 onready var viewmodel = $Camera/ViewModel
-onready var viewmodel_origin = viewmodel.transform.origin
+var viewmodel_origin = Vector3(0.5, -0.4, -0.75)
 onready var player = get_parent()
 
 var bobtimes = [0,0,0]
@@ -27,7 +27,6 @@ var shakelength = 0.0
 var deltaTime : float = 0.0
 var idletime : float = 0.0
 var mouse_move : Vector2 = Vector2.ZERO
-var moved : bool  = false
 var mouse_rotation_x : float = 0.0
 var newbob : bool = false
 var oldy : float = 0.0
@@ -52,11 +51,11 @@ var tiltextra : float = 2.0           # default: 2.0
 
 #Viewmodel Sway
 var swayPos_offset : float = 0.12     # default: 0.12
-var swayPos_max : float = 0.5        # default: 0.1
-var swayPos_speed : float = 7.0       # default: 9.0
+var swayPos_max : float = 0.5       # default: 0.1
+var swayPos_speed : float = 9.0       # default: 9.0
 var swayRoll_angle : float = 5.0      # default: 5.0   (old default: Vector3(5.0, 5.0, 2.0))
-var swayRoll_max : float = 10.0       # default: 15.0  (old default: Vector3(12.0, 12.0, 4.0))
-var swayRoll_speed : float = 2.0     # default: 10.0
+var swayRoll_max : float = 15.0       # default: 15.0  (old default: Vector3(12.0, 12.0, 4.0))
+var swayRoll_speed : float = 5.0     # default: 10.0
 
 #View Idle
 var idlescale : float= 1.6            # default: 1.6
@@ -92,6 +91,7 @@ _ready
 func _ready():
 	newbob = true
 	swayPos = viewmodel_origin
+	#Input.set_use_accumulated_input(false)
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 """
@@ -101,8 +101,8 @@ _input
 """
 func _input(event):
 	if event is InputEventMouseMotion:
-		moved = true
-		mouse_move = lerp(mouse_move, event.relative * mouse_sensitivity, 15 * deltaTime)
+		mouse_move = event.relative * 0.1
+		
 		mouse_rotation_x -= event.relative.y * mouse_sensitivity
 		mouse_rotation_x = clamp(mouse_rotation_x, -90, 90)
 		player.rotate_y(deg2rad(-event.relative.x * mouse_sensitivity))
@@ -116,10 +116,10 @@ _process
 ===============
 """
 func _physics_process(delta):
-	deltaTime = delta
 	
-	# Player can still look around if dead
-	camera.rotation_degrees = Vector3(mouse_rotation_x, 0, 0)
+	#lab.text += str(mouse_move) + "\n"
+	
+	deltaTime = delta
 	
 	if player.is_dead:
 		camera.rotation_degrees.z = 80
@@ -127,42 +127,30 @@ func _physics_process(delta):
 		return
 	
 	# Set points of origin
+	camera.rotation_degrees = Vector3(mouse_rotation_x, 0, 0)
 	transform.origin = Vector3(0, y_offset, 0)
 	viewmodel.transform.origin = viewmodel_origin
 	viewmodel.rotation_degrees = Vector3.ZERO
 	
 	VelocityRoll()
-	ViewModelSway()
+	ViewModelSway(deltaTime)
 	
 	if player.velocity.length() <= 0.1:
 		bobtimes = [0,0,0]
 		Q_bobtime = 0.0
-		
 		AddIdle()
 		ViewIdle()
 		ViewModelIdle()
 	else:
 		idletime = 0.0
-		
 		AddBob()
 		if newbob:
 			ViewBobModern()
 		else:
 			ViewBobClassic()
-		
 		ViewModelBob()
 	
-	# Smooth out stair step ups
-	var current = player.global_transform.origin[1]
-	if player.state == 0 and current - oldy > 0:
-		oldy += delta * 15.0
-		if oldy > current:
-			oldy = current
-		if current - oldy > 1.2:
-			oldy = current - 1.2
-		transform.origin[1] += oldy - current
-	else:
-		oldy = current
+	SmoothStepUp()
 	
 	# Apply damage/fall kicks
 	if v_dmg_time > 0.0:
@@ -175,31 +163,50 @@ func _physics_process(delta):
 
 """
 ===============
+SmoothStepUp
+Smooth out stair step ups
+===============
+"""
+func SmoothStepUp():
+	var current = player.global_transform.origin[1]
+	if player.state != 1 and current - oldy > 0:
+		oldy += deltaTime * 15.0
+		if oldy > current:
+			oldy = current
+		if current - oldy > 1.2:
+			oldy = current - 1.2
+		transform.origin[1] += oldy - current
+	else:
+		oldy = current
+	pass
+
+"""
+===============
 ViewModelSway
 Lerp weapon origin & angle while moving the mouse
 ===============
 """
-func ViewModelSway():
+func ViewModelSway(delta):
 	var pos : Vector3
 	var rot : Vector3
 	
-	if !moved:
+	if mouse_move == null:
 		mouse_move = mouse_move.linear_interpolate(Vector2.ZERO, 1 * deltaTime)
+		return
 	
-	moved = false
-	
-	pos = Vector3.ZERO 
+	pos = Vector3.ZERO
 	pos.x = clamp(-mouse_move.x * swayPos_offset, -swayPos_max, swayPos_max)
 	pos.y = clamp(mouse_move.y * swayPos_offset, -swayPos_max, swayPos_max)
-	swayPos = lerp(swayPos, pos, swayPos_speed * deltaTime)
+	swayPos = lerp(swayPos, pos, swayPos_speed * delta)
 	viewmodel.transform.origin += swayPos
 	
-	#rot = Vector3.ZERO
-	#rot.x = clamp(-mouse_move.y * swayRoll_angle, -swayRoll_max, swayRoll_max)
-	##rot.z = clamp(mouse_move.x * swayRoll_angle, -swayRoll_max, swayRoll_max)
-	#rot.y = clamp(-mouse_move.x * swayRoll_angle, -swayRoll_max, swayRoll_max)
-	#swayRoll = lerp(swayRoll, rot, swayRoll_speed * deltaTime)
-	#viewmodel.rotation_degrees += swayRoll
+	rot = Vector3.ZERO
+	rot.x = clamp(-mouse_move.y * swayRoll_angle, -swayRoll_max, swayRoll_max)
+	#rot.z = clamp(mouse_move.x * swayRoll_angle, -swayRoll_max, swayRoll_max)
+	rot.y = clamp(-mouse_move.x * swayRoll_angle, -swayRoll_max, swayRoll_max)
+	swayRoll = lerp(swayRoll, rot, swayRoll_speed * delta)
+	viewmodel.rotation_degrees += swayRoll
+	
 
 """
 ===============
@@ -209,9 +216,9 @@ VelocityRoll
 func VelocityRoll():
 	var side : float
 	
-	side = CalcRoll(player.velocity, rollangles, rollspeed) * 4;
+	side = CalcRoll(player.velocity, rollangles, rollspeed) * 4
 	camera.rotation_degrees.z += side
-	viewmodel.rotation_degrees.z = side * tiltextra
+	#viewmodel.rotation_degrees.z = side * tiltextra
 
 """
 ===============
@@ -220,18 +227,19 @@ Roll angle left/right based on velocity
 ===============
 """
 func CalcRoll (velocity, angle, speed):
-	var _sign : float
+	var s : float
 	var side : float
 	
 	side = velocity.dot(-get_global_transform().basis.x)
-	_sign = -1 if side < 0 else 1
+	s = sign(side)
 	side = abs(side)
 	
 	if (side < speed):
 		side = side * angle / speed;
 	else:
 		side = angle;
-	return side * _sign
+	
+	return side * s
 
 """
 ==============
