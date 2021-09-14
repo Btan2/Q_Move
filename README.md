@@ -14,15 +14,13 @@ NOTE: Website is currently under construction so it may contain broken links or 
   - Optional modern style head-bob converted from Admer456's "Better View Bobbing" tutorial (https://gamebanana.com/tuts/12972).
   - Proper step climbing; no invisible ramps or other trickery used.
   - Trace function addon for collision shape casting (used for step detection).
-  - Jump hang to enable allow more forgiving jumping precision off ledges.
+  - Jump hang to allow more forgiving jumping precision off ledges.
   - More standard FPS features to be added to the project over time.
 
 # Current Issues
-  - 'move_and_slide' produces occasional buggy movement if the velocity is clipped at ANY point during the move. This is an ongoing issue with Godot at the moment.
-  - Trace function is a little inefficient as certain collision shape casting methods will not return all of the required information for collision response. I have to use 3 different collision shape casts in order to retrieve the distance fraction, collision normal and position of the shape when it collides with something.
-  - The controller will slowly slide down non-steep slopes.
+  - Trace function is a little inefficient as certain collision shape casting methods will not return all of the required information for collision response. Multiple casting methods are required in order to retrieve the distance fraction, collision normal and end position of the shape when it collides with something.
+  - The controller will slowly slide down non-steep slopes. This issue is common with Godot.
   - Complex geometry hasn't been tested yet, only simple box shapes have been used so far.
-  - Slight collision jitters may occur when moving against two object surfaces that overlap one another.
   - The player can slowly move up steep slopes that they should otherwise slide down, although this was also prevalent in Half-Life and Quake so I might keep it in for prosterity. Moving along the base of steep slopes that connect with ground can cause small camera jitters.
 
 # License
