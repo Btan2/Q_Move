@@ -4,7 +4,7 @@ A Quake-like controller for Godot.
 # About
 The aim of this project is to provide Godot devlopers with a robust character controller that delivers the same level of responsiveness as Quake and Half-Life. A majority of Quake-like controllers seem to lack the ability to handle steps and often have to resort to rudimentary workarounds such as invisible ramps or singular raycast lines which do not represent the player's hull accurately. This controller is an attempt to fix this issue and to recreate the idiosyncratic behaviours of the Quake and Half-Life controllers.
 
-A generalised description on how the step function works can be found on my website: https://thelowrooms.xyz/articledir/collisionresponse_programming.php
+A generalised description on how the step function works can be found on my website: https://thelowrooms.xyz/articledir/programming_stepclimbing.php
 
 NOTE: Website is currently under construction so it may contain broken links or text/heading alignment errors.
 
