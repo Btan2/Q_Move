@@ -189,14 +189,11 @@ LadderCheck
 ===============
 """
 func LadderCheck():
-	var on_ladder : bool
 	var shape : CylinderShape
 	var trace
 	
 	if crouch_press: 
 		return
-	
-	on_ladder = false
 	
 	# Use a slightly thicker version of player cylinder for ladder detection
 	shape = CylinderShape.new()
@@ -205,31 +202,40 @@ func LadderCheck():
 	shape.margin = float(collider.shape.margin)
 	
 	# Check if touching a ladder
-	on_ladder = Trace.intersect(global_transform.origin, shape, self, LADDER_LAYER)
+	trace = Trace.intersect(global_transform.origin, shape, self, LADDER_LAYER)
+	if !trace:
+		return
 	
-	if on_ladder:
-		
-		# Get ladder normal
-		trace = Trace.rest_normal(global_transform.origin, shape, self, LADDER_LAYER)
-		if !trace.empty():
-			ladder_normal = trace.get("normal")
-		
-		# Check if moving away from the ladder
-		var dir = (transform.basis.x * smove + -transform.basis.z * fmove).normalized()
-		var move_off = dir.dot(ladder_normal) > 0
-		
-		# Move off ladder if touching stable ground
-		if move_off and state == GROUNDED: 
-			return
-		
-		# Jump away from ladder
-		if move_off and jump_press:
-			velocity = dir * 10.0
-			ground_normal = Vector3.UP
-			return
-		
-		#sfx.set_ground_type("LADDER_METAL")
-		state = LADDER
+	# Set ladder type
+	if len(trace) > 0:
+		for g in trace:
+			if str(g) == "[LADDER_METAL]":
+				pass
+				#sfx.set_ground_type("LADDER_METAL")
+			elif str(g) == "[LADDER_WOOD]":
+				pass
+				#sfx.set_ground_type("LADDER_WOOD")
+	
+	# Get ladder normal
+	trace = Trace.rest_normal(global_transform.origin, shape, self, LADDER_LAYER)
+	if !trace.empty():
+		ladder_normal = trace.get("normal")
+	
+	# Check if moving away from the ladder
+	var dir = (transform.basis.x * smove + -transform.basis.z * fmove).normalized()
+	var move_off = dir.dot(ladder_normal) > 0
+	
+	# Move off ladder if touching stable ground
+	if move_off and state == GROUNDED: 
+		return
+	
+	# Jump away from ladder
+	if move_off and jump_press:
+		velocity = dir * 10.0
+		ground_normal = Vector3.UP
+		return
+	
+	state = LADDER
 
 """
 ===============

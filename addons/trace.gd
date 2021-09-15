@@ -50,6 +50,7 @@ func intersect(origin : Vector3, shape, e, mask):
 	var params : PhysicsShapeQueryParameters
 	var space_state
 	var results
+	var groups = []
 	
 	params = PhysicsShapeQueryParameters.new()
 	params.set_shape(shape)
@@ -62,7 +63,11 @@ func intersect(origin : Vector3, shape, e, mask):
 	results = space_state.intersect_shape(params, 8)
 	
 	if !results.empty():
-		return true
+		for r in results:
+			var group = r.get("collider").get_groups()
+			if len(group) > 0:
+				groups.append(group)
+		return groups
 	
 	return false
 

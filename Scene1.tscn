@@ -337,7 +337,6 @@ mesh = SubResource( 26 )
 material/0 = null
 
 [node name="StaticBody" type="StaticBody" parent="Ladder" groups=[
-"DOUBLE_SIDED",
 "LADDER_METAL",
 ]]
 collision_layer = 2
