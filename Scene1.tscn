@@ -1,8 +1,8 @@
 [gd_scene load_steps=31 format=2]
 
-[ext_resource path="res://pmove.gd" type="Script" id=1]
-[ext_resource path="res://view.gd" type="Script" id=2]
-[ext_resource path="res://paudio.gd" type="Script" id=3]
+[ext_resource path="res://scripts/pmove.gd" type="Script" id=1]
+[ext_resource path="res://scripts/view.gd" type="Script" id=2]
+[ext_resource path="res://scripts/paudio.gd" type="Script" id=3]
 [ext_resource path="res://audio/windfall_1.ogg" type="AudioStream" id=4]
 [ext_resource path="res://audio/concrete_0.ogg" type="AudioStream" id=5]
 
@@ -267,18 +267,8 @@ material/0 = SubResource( 18 )
 [node name="CollisionShape" type="CollisionShape" parent="MeshInstance7/StaticBody"]
 shape = SubResource( 13 )
 
-[node name="MeshInstance16" type="MeshInstance" parent="."]
-transform = Transform( 49.8585, 0, -1.06581e-14, 0, 7.27355, 0, 5.79803e-11, 0, 9.5851, -13.369, 7.14518, -210.641 )
-mesh = SubResource( 11 )
-material/0 = SubResource( 18 )
-
-[node name="StaticBody" type="StaticBody" parent="MeshInstance16"]
-
-[node name="CollisionShape" type="CollisionShape" parent="MeshInstance16/StaticBody"]
-shape = SubResource( 13 )
-
 [node name="MeshInstance17" type="MeshInstance" parent="."]
-transform = Transform( 120, 0, -1.78907e-11, 0, 7, 0, 2.14689e-10, 0, 10, -14, 7, -100 )
+transform = Transform( 150, 0, -1.27791e-11, 0, 7, 0, 1.91687e-10, 0, 10, 0, 7, -100 )
 mesh = SubResource( 29 )
 material/0 = SubResource( 18 )
 
@@ -288,17 +278,14 @@ material/0 = SubResource( 18 )
 shape = SubResource( 30 )
 
 [node name="MeshInstance18" type="MeshInstance" parent="."]
-transform = Transform( 50, 0, -1.71483e-11, 0, 7, 0, 8.94536e-11, 0, 9.585, 84.631, 7.14518, -99.641 )
-visible = false
+transform = Transform( 150, 0, -1.27791e-11, 0, 7, 0, 1.91687e-10, 0, 10, 0, 7, -211 )
 mesh = SubResource( 29 )
 material/0 = SubResource( 18 )
 
-[node name="StaticBody" type="StaticBody" parent="MeshInstance18" groups=[
-"DEFAULT",
-]]
+[node name="StaticBody" type="StaticBody" parent="MeshInstance18"]
 
 [node name="CollisionShape" type="CollisionShape" parent="MeshInstance18/StaticBody"]
-shape = SubResource( 13 )
+shape = SubResource( 30 )
 
 [node name="MeshInstance3" type="MeshInstance" parent="."]
 transform = Transform( 5.65714, 0, 0, 0, 8.75003, 0, 0, 0, 4.80793, 11.5233, 7.73615, -125.601 )

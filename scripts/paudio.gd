@@ -23,9 +23,6 @@ var jump_volume : float = 0.5
 var step_distance : float = 0.0
 var last_position : Vector3 = Vector3.ZERO
 
-var foottime : float = 0.0
-var played_foot : bool = false
-
 enum {CONCRETE, GRASS, CARPET, TILE, WOOD, PUDDLE, WATER, SAND, ROCK, LADDER_METAL, LADDER_WOOD, ROPE, METAL, AIRVENT}
 var ground_type = CONCRETE
 
@@ -58,8 +55,6 @@ func _ready() -> void:
 	env.stream = preload("res://audio/windfall_1.ogg")
 	
 	last_position = player.global_transform.origin
-	
-	foottime += 0.001
 
 """
 ===============
@@ -75,8 +70,6 @@ func _process(delta):
 	
 	if player.state == 0 or player.state == 2:
 		PlayFootstep(vel)
-	else:
-		foottime = 0.0
 
 """
 ===============

@@ -218,7 +218,7 @@ func VelocityRoll():
 	
 	side = CalcRoll(player.velocity, rollangles, rollspeed) * 4
 	camera.rotation_degrees.z += side
-	#viewmodel.rotation_degrees.z = side * tiltextra
+	viewmodel.rotation_degrees.z = side * tiltextra
 
 """
 ===============

@@ -12,9 +12,8 @@ config_version=4
 
 config/name="Q_Move"
 run/main_scene="res://Scene1.tscn"
-boot_splash/image="res://21n818h36zl71.png"
+boot_splash/image="res://splash.png"
 boot_splash/bg_color=Color( 0, 0, 0, 1 )
-config/icon="res://icon.png"
 
 [audio]
 
