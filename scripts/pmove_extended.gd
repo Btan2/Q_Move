@@ -1,0 +1,172 @@
+extends "res://scripts/pmove.gd"
+
+"""
+pmove_advanced.gd
+
+- Extends player movement controller (pmove.gd)
+- Ladder climbing and dismount
+- Leading edge drop off check
+"""
+
+var ladder_normal : Vector3 = Vector3.UP
+const LADDER_LAYER = 2
+
+"""
+===============
+CategorizePosition
+Check if the player is touching the ground
+===============
+"""
+func CategorizePosition():
+	var down : Vector3
+	var trace
+	
+	# Check for ground 0.1 units below the player
+	down = global_transform.origin + Vector3.DOWN * 0.1
+	trace = Trace.normalfrac(global_transform.origin, down, collider.shape, self)
+	
+	if trace[0] == 1:
+		state = FALLING
+		ground_normal = Vector3.UP
+	else: 
+		ground_normal = trace[2]
+		
+		if ground_normal[1] < 0.7:
+			state = FALLING # Too steep!
+		else:
+			if state == FALLING:
+				CalcFallDamage()
+			
+			global_transform.origin = trace[1] # Clamp to ground
+			prev_y = global_transform.origin[1]
+			impact_velocity = 0
+			
+			state = GROUNDED
+	
+	LadderCheck()
+
+"""
+===============
+CheckState
+===============
+"""
+func CheckState():
+	match(state):
+		LADDER:
+			LadderMove()
+		GROUNDED:
+			GroundMove()
+		FALLING:
+			AirMove()
+
+"""
+===============
+LadderCheck
+===============
+"""
+func LadderCheck():
+	var shape : CylinderShape
+	var trace
+	
+	if crouch_press: 
+		return
+	
+	# Use a slightly thicker version of player cylinder for ladder detection
+	shape = CylinderShape.new()
+	shape.radius = float(collider.shape.radius + 0.05)
+	shape.height = float(collider.shape.height)
+	shape.margin = float(collider.shape.margin)
+	
+	# Check if touching a ladder
+	trace = Trace.intersect_groups(global_transform.origin, shape, self, LADDER_LAYER)
+	if !trace:
+		return
+	
+	# Set ladder type
+	if len(trace) > 0:
+		for g in trace:
+			if str(g) == "[LADDER_METAL]":
+				pass
+				#sfx.set_ground_type("LADDER_METAL")
+			elif str(g) == "[LADDER_WOOD]":
+				pass
+				#sfx.set_ground_type("LADDER_WOOD")
+	
+	# Get ladder normal
+	trace = Trace.rest(global_transform.origin, shape, self, LADDER_LAYER)
+	if !trace.empty():
+		ladder_normal = trace.get("normal")
+	
+	# Check if moving away from the ladder
+	var dir = (transform.basis.x * smove + -transform.basis.z * fmove).normalized()
+	var move_off = dir.dot(ladder_normal) > 0
+	
+	# Move off ladder if touching stable ground
+	if move_off and state == GROUNDED: 
+		return
+	
+	# Jump away from ladder
+	if move_off and jump_press:
+		velocity = dir * 10.0
+		ground_normal = Vector3.UP
+		return
+	
+	state = LADDER
+
+"""
+===============
+LadderMove
+===============
+"""
+func LadderMove():
+	var wishdir = (global_transform.basis.x * smove + -head.camera.global_transform.basis.z * fmove).normalized()
+	var forward_dir = wishdir.slide(Vector3.UP)
+	wishdir = wishdir.slide(ladder_normal)
+	
+	GroundAccelerate(wishdir, movespeed/2.0)
+	
+	var ccd_max = 5
+	for _i in range(ccd_max):
+		var ccd_step = velocity / ccd_max
+		var collision = move_and_collide(ccd_step * deltaTime)
+		if collision:
+			velocity = velocity.slide(collision.get_normal())
+	
+	StepMove(global_transform.origin, forward_dir * 4.0)
+	
+	prev_y = transform.origin[1]
+	impact_velocity = 0
+
+"""
+===============
+GroundAccelerate
+===============
+"""
+func GroundAccelerate(wishdir, wishspeed):
+	var friction : float
+	var speed    : float 
+	
+	friction = MOVEFRICTION
+	speed = velocity.length()
+	
+	if state == LADDER:
+		friction = 30.0
+	elif speed > 0.0:
+		# If the leading edge is over a dropoff, increase friction
+		var start = global_transform.origin
+		start[0] += velocity[0] / speed * 1.6
+		start[2] += velocity[2] / speed * 1.6
+		var stop = Vector3.ZERO
+		stop[0] = start[0]
+		stop[1] = start[1] - 3.6
+		stop[2] = start[2]
+		var trace = Trace.motion(start, stop, collider.shape, self)
+		if trace[0] == 1:
+			friction *= 2.0
+	
+	# Friction applied after move release
+	if wishdir != Vector3.ZERO:
+		velocity = velocity.linear_interpolate(wishdir * wishspeed, ACCELERATE * deltaTime) 
+	else:
+		velocity = velocity.linear_interpolate(Vector3.ZERO, friction * deltaTime) 
+

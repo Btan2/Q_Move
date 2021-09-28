@@ -1,14 +1,14 @@
 extends Spatial
 
 """
-view.gd
+view_advanced.gd
 
-- Controls the player view and view-model (i.e their weapon)
-- Uses modified functions from Quake source code for weapon-bob, head-bob and so on.
-- Lots of vars, so you might want to hard code some values before building
+- Controls player view and their view-model
 """
 
 onready var camera = $Camera
+onready var viewmodel = $Camera/ViewModel
+var viewmodel_origin = Vector3(0.5, -0.4, -0.75)
 onready var player = get_parent()
 
 var bobtimes = [0,0,0]
@@ -29,6 +29,8 @@ var mouse_move : Vector2 = Vector2.ZERO
 var mouse_rotation_x : float = 0.0
 var newbob : bool = false
 var oldy : float = 0.0
+var swayPos : Vector3 = Vector3.ZERO
+var swayRot : Vector3 = Vector3.ZERO
 var v_dmg_time : float = 0.0
 var v_dmg_roll : float = 0.0
 var v_dmg_pitch : float = 0.0
@@ -46,6 +48,14 @@ var rollangles : float = 7.0          # default: 15.0
 var rollspeed : float = 300.0         # default: 300.0
 var tiltextra : float = 2.0           # default: 2.0
 
+#Viewmodel Sway
+var swayPos_offset : float = 0.12     # default: 0.12
+var swayPos_max : float = 0.5       # default: 0.1
+var swayPos_speed : float = 9.0       # default: 9.0
+var swayRot_angle : float = 5.0      # default: 5.0   (old default: Vector3(5.0, 5.0, 2.0))
+var swayRot_max : float = 15.0       # default: 15.0  (old default: Vector3(12.0, 12.0, 4.0))
+var swayRot_speed : float = 5.0     # default: 10.0
+
 #View Idle
 var idlescale : float= 1.6            # default: 1.6
 var iyaw_cycle : float = 1.5          # default: 1.5
@@ -54,10 +64,19 @@ var ipitch_cycle : float = 2.0        # default: 2.0
 var iyaw_level : float = 0.1          # default: 0.1
 var iroll_level : float = 0.2         # default: 0.2
 var ipitch_level : float = 0.15       # default: 0.15
+
+# Viewmodel Idle
+var idlePos_scale = 0.1                         #default: 0.1
+var idleRot_scale = 0.5                         #default: 0.5
+var idlePos_cycle = Vector3(2.0, 4.0, 0)        #default: Vector3(2.0, 4.0, 0) 
+var idlePos_level = Vector3(0.02, 0.045, 0)     #default: Vector3(0.02, 0.045, 0) 
+var idleRot_cycle = Vector3(1.0, 0.5, 1.25)     #default: Vector3(1.0, 0.5, 1.25)
+var idleRot_level = Vector3(-1.5, 2, 1.5)       #default: Vector3(-1.5, 2, 1.5)
+
 var mouse_sensitivity : float = 0.1
 
-const kick_time : float = 0.5         # default: 0.5
-const kick_amount : float = 0.6       # default: 0.6
+const kick_time : float = 0.5           # default: 0.5
+const kick_amount : float = 0.6         # default: 0.6
 var y_offset : float = 1.25           # default: 1.0
 
 enum { VB_COS, VB_SIN, VB_COS2, VB_SIN2 }
@@ -70,6 +89,7 @@ _ready
 """
 func _ready():
 	newbob = true
+	swayPos = viewmodel_origin
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 
 """
@@ -94,9 +114,6 @@ _process
 ===============
 """
 func _physics_process(delta):
-	
-	#lab.text += str(mouse_move) + "\n"
-	
 	deltaTime = delta
 	
 	if player.is_dead:
@@ -107,14 +124,18 @@ func _physics_process(delta):
 	# Set points of origin
 	camera.rotation_degrees = Vector3(mouse_rotation_x, 0, 0)
 	transform.origin = Vector3(0, y_offset, 0)
+	viewmodel.transform.origin = viewmodel_origin
+	viewmodel.rotation_degrees = Vector3.ZERO
 	
 	VelocityRoll()
+	ViewModelSway(deltaTime)
 	
 	if player.velocity.length() <= 0.1:
 		bobtimes = [0,0,0]
 		Q_bobtime = 0.0
 		AddIdle()
 		ViewIdle()
+		ViewModelIdle()
 	else:
 		idletime = 0.0
 		AddBob()
@@ -122,6 +143,7 @@ func _physics_process(delta):
 			ViewBobModern()
 		else:
 			ViewBobClassic()
+		ViewModelBob()
 	
 	SmoothStepUp()
 	
@@ -151,7 +173,34 @@ func SmoothStepUp():
 		transform.origin[1] += oldy - current
 	else:
 		oldy = current
-	pass
+
+"""
+===============
+ViewModelSway
+Lerp weapon origin & angle while moving the mouse
+===============
+"""
+func ViewModelSway(delta):
+	var pos : Vector3
+	var rot : Vector3
+	
+	if mouse_move == null:
+		mouse_move = mouse_move.linear_interpolate(Vector2.ZERO, 1 * deltaTime)
+		return
+	
+	pos = Vector3.ZERO
+	pos.x = clamp(-mouse_move.x * swayPos_offset, -swayPos_max, swayPos_max)
+	pos.y = clamp(mouse_move.y * swayPos_offset, -swayPos_max, swayPos_max)
+	swayPos = lerp(swayPos, pos, swayPos_speed * delta)
+	viewmodel.transform.origin += swayPos
+	
+	rot = Vector3.ZERO
+	rot.x = clamp(-mouse_move.y * swayRot_angle, -swayRot_max, swayRot_max)
+	rot.z = clamp(mouse_move.x * swayRot_angle, -swayRot_max/3, swayRot_max/3)
+	rot.y = clamp(-mouse_move.x * swayRot_angle, -swayRot_max, swayRot_max)
+	swayRot = lerp(swayRot, rot, swayRot_speed * delta)
+	viewmodel.rotation_degrees += swayRot
+	
 
 """
 ===============
@@ -163,6 +212,7 @@ func VelocityRoll():
 	
 	side = CalcRoll(player.velocity, rollangles, rollspeed) * 4
 	camera.rotation_degrees.z += side
+	viewmodel.rotation_degrees.z += side * tiltextra
 
 """
 ===============
@@ -209,6 +259,16 @@ func ViewIdle():
 
 """
 ===============
+ViewModelIdle
+===============
+"""
+func ViewModelIdle():
+	for i in range(3):
+		viewmodel.transform.origin[i] += idlePos_scale * sin(idletime * idlePos_cycle[i]) * idlePos_level[i]
+		viewmodel.rotation_degrees[i] += idleRot_scale * sin(idletime * idleRot_cycle[i]) * idleRot_level[i]
+
+"""
+===============
 AddBob
 ===============
 """
@@ -216,6 +276,18 @@ func AddBob():
 	bobRight = CalcBob(0.75, bob_mode, 0, bobRight)
 	bobUp = CalcBob(1.50, bob_mode, 1, bobUp)
 	bobForward = CalcBob(1.00, bob_mode, 2, bobForward)
+
+"""
+===============
+ViewModelBob
+Bob view model on xyz axes
+===============
+"""
+func ViewModelBob():
+	for i in range(3):
+		viewmodel.transform.origin[i] += bobRight * 0.25 * transform.basis.x[i]
+		viewmodel.transform.origin[i] += bobUp * 0.125 * transform.basis.y[i]
+		viewmodel.transform.origin[i] += bobForward * 0.06125 * transform.basis.z[i]
 
 """
 ===============
@@ -319,6 +391,7 @@ Shake
 """
 func Shake(easing):
 	var cycle = Vector3(33, 44, 36)
+	var m_level = Vector3(0.02, 0.06, 0.02)
 	var v_level = Vector3(-1.5, 2, 1.25)
 	var s_scale : float
 	
@@ -334,6 +407,7 @@ func Shake(easing):
 		s_scale = 1.0 - shaketime/shakelength
 	
 	for i in range(3):
+		viewmodel.transform.origin[i] += s_scale * sin(shaketime * cycle[i]) * m_level[i]
 		camera.rotation_degrees[i] += s_scale * sin(shaketime * cycle[i]) * v_level[i]
 	
 

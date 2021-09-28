@@ -1,0 +1,15 @@
+[remap]
+
+importer="ogg_vorbis"
+type="AudioStreamOGGVorbis"
+path="res://.import/land_concrete_08.ogg-f00887fb25b909860a4f490b1bdca269.oggstr"
+
+[deps]
+
+source_file="res://audio/land_concrete_08.ogg"
+dest_files=[ "res://.import/land_concrete_08.ogg-f00887fb25b909860a4f490b1bdca269.oggstr" ]
+
+[params]
+
+loop=false
+loop_offset=0

@@ -2,32 +2,28 @@ extends Spatial
 
 """
 ===============
-fraction
-Returns distance fraction
+motion
 ===============
 """
-func fraction(origin, dest, shape, e):
-	# Create collision parameters
-	var params = PhysicsShapeQueryParameters.new()
+func motion(origin, dest, shape, e):
+	var params
+	var space_state
+	
+	params = PhysicsShapeQueryParameters.new()
 	params.set_shape(shape)
 	params.transform.origin = origin
 	params.collide_with_bodies = true
 	params.exclude = [e]
 	
-	# Get distance fraction
-	var space_state = get_world().direct_space_state
-	var results = space_state.cast_motion(params, dest - origin)
-	if !results.empty():
-		return results[0]
-	else:
-		return 1
+	space_state = get_world().direct_space_state
+	return space_state.cast_motion(params, dest - origin)
 
 """
 ===============
-rest_normal
+rest
 ===============
 """
-func rest_normal(origin : Vector3, shape, e, mask):
+func rest(origin : Vector3, shape, e, mask):
 	var params
 	var space_state
 	
@@ -43,10 +39,10 @@ func rest_normal(origin : Vector3, shape, e, mask):
 
 """
 ===============
-intersect
+intersect_groups
 ===============
 """
-func intersect(origin : Vector3, shape, e, mask):
+func intersect_groups(origin : Vector3, shape, e, mask):
 	var params : PhysicsShapeQueryParameters
 	var space_state
 	var results
@@ -70,39 +66,6 @@ func intersect(origin : Vector3, shape, e, mask):
 		return groups
 	
 	return false
-
-"""
-===============
-group
-Returns collision groups and collider
-NOTE: Uses intersect_shape, so it passes through collision objects
-===============
-"""
-func group(origin : Vector3, shape, e, mask):
-	var params : PhysicsShapeQueryParameters
-	var space_state
-	var results
-	var groups = []
-	var colliders = []
-	
-	params = PhysicsShapeQueryParameters.new()
-	params.set_shape(shape)
-	params.transform.origin = origin
-	params.collide_with_bodies = true
-	params.exclude = [e]
-	params.set_collision_mask(mask)
-	
-	space_state = get_world().direct_space_state
-	results = space_state.intersect_shape(params, 8)
-	
-	if !results.empty():
-		for r in results:
-			var group = r.get("collider").get_groups()
-			if len(group) > 0:
-				colliders.append(r.get("collider"))
-				groups.append(group)
-	
-	return Array([groups, colliders])
 
 """
 ===============
@@ -187,7 +150,6 @@ func normalfrac(origin, dest, shape, e):
 	
 	return Array([fraction, endpos, normal])
 
-
 """
 ===============
 full
@@ -242,3 +204,37 @@ func full(origin, dest, shape, e):
 		type = ""
 	
 	return Array([fraction, endpos, normal, type])
+
+
+#"""
+#===============
+#group
+#Returns collision groups and collider
+#NOTE: Uses intersect_shape, so it passes through collision objects
+#===============
+#"""
+#func group(origin : Vector3, shape, e, mask):
+#	var params : PhysicsShapeQueryParameters
+#	var space_state
+#	var results
+#	var groups = []
+#	var colliders = []
+#
+#	params = PhysicsShapeQueryParameters.new()
+#	params.set_shape(shape)
+#	params.transform.origin = origin
+#	params.collide_with_bodies = true
+#	params.exclude = [e]
+#	params.set_collision_mask(mask)
+#
+#	space_state = get_world().direct_space_state
+#	results = space_state.intersect_shape(params, 8)
+#
+#	if !results.empty():
+#		for r in results:
+#			var group = r.get("collider").get_groups()
+#			if len(group) > 0:
+#				colliders.append(r.get("collider"))
+#				groups.append(group)
+#
+#	return Array([groups, colliders])

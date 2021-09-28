@@ -1,11 +1,12 @@
 extends KinematicBody
 
 """
-pmove.gd
+pmove_advanced.gd
 
-- Player movement controller
-- Player will still slide down slopes
-- Only tested with simple 3D shapes such as boxes and spheres
+- Advanced player movement controller
+- Ladder climbing and dismount
+- Slope speed modifier
+- Leading edge drop off check
 """
 
 onready var collider : CollisionShape = $CollisionShape
@@ -31,6 +32,7 @@ var movespeed : float = 32.0
 var fmove : float = 0.0
 var smove : float = 0.0
 var ground_normal : Vector3 = Vector3.UP
+var ladder_normal : Vector3 = Vector3.UP
 var hangtime : float = 0.2
 var impact_velocity : float = 0.0
 var is_dead : bool = false
@@ -42,6 +44,8 @@ var velocity : Vector3 = Vector3.ZERO
 
 enum {GROUNDED, FALLING, LADDER, SWIMMING, NOCLIP}
 var state = GROUNDED
+
+const LADDER_LAYER = 2
 
 """
 ===============
@@ -86,23 +90,26 @@ _physics_process
 ===============
 """
 func _physics_process(delta):
+	$Label.text = "\n"
+	$Label.text += "Velocity: " + str(velocity.length()) + "\n"
+	
 	deltaTime = delta
 	
 	Crouch()
 	CategorizePosition()
+	LadderCheck()
 	JumpButton()
-	CheckState()
 
-"""
-===============
-CheckState
-===============
-"""
-func CheckState():
-	if state == GROUNDED:
-		GroundMove()
-	elif state == FALLING:
-		AirMove()
+	match(state):
+		LADDER:
+			#$Label.text += "Ladder" + "\n"
+			LadderMove()
+		GROUNDED:
+			#$Label.text += "Grounded" + "\n"
+			GroundMove()
+		FALLING:
+			#$Label.text += "Falling" + "\n"
+			AirMove()
 
 """
 ===============
@@ -177,10 +184,63 @@ func CalcFallDamage():
 		sfx.PlayLandHurt()
 		head.ParseDamage(Vector3.ONE * float(impact_velocity / 6))
 	else:
-		if fall_dist > PLAYER_HEIGHT:
-			sfx.PlayLand()
 		if fall_dist >= 8:
+			sfx.PlayLand()
 			head.ParseDamage(Vector3.ONE * float(impact_velocity / 8))
+
+"""
+===============
+LadderCheck
+===============
+"""
+func LadderCheck():
+	var shape : CylinderShape
+	var trace
+	
+	if crouch_press: 
+		return
+	
+	# Use a slightly thicker version of player cylinder for ladder detection
+	shape = CylinderShape.new()
+	shape.radius = float(collider.shape.radius + 0.05)
+	shape.height = float(collider.shape.height)
+	shape.margin = float(collider.shape.margin)
+	
+	# Check if touching a ladder
+	trace = Trace.intersect_groups(global_transform.origin, shape, self, LADDER_LAYER)
+	if !trace:
+		return
+	
+	# Set ladder type
+	if len(trace) > 0:
+		for g in trace:
+			if str(g) == "[LADDER_METAL]":
+				pass
+				#sfx.set_ground_type("LADDER_METAL")
+			elif str(g) == "[LADDER_WOOD]":
+				pass
+				#sfx.set_ground_type("LADDER_WOOD")
+	
+	# Get ladder normal
+	trace = Trace.rest(global_transform.origin, shape, self, LADDER_LAYER)
+	if !trace.empty():
+		ladder_normal = trace.get("normal")
+	
+	# Check if moving away from the ladder
+	var dir = (transform.basis.x * smove + -transform.basis.z * fmove).normalized()
+	var move_off = dir.dot(ladder_normal) > 0
+	
+	# Move off ladder if touching stable ground
+	if move_off and state == GROUNDED: 
+		return
+	
+	# Jump away from ladder
+	if move_off and jump_press:
+		velocity = dir * 10.0
+		ground_normal = Vector3.UP
+		return
+	
+	state = LADDER
 
 """
 ===============
@@ -235,36 +295,33 @@ func GroundMove():
 			var normal = collision.get_normal()
 			var stepped = false
 			if normal[1] < 0.7 and !is_dead:
-				stepped = StepMove(global_transform.origin, ccd_step.normalized() * ccd_max)
+				stepped = StepMove(global_transform.origin, velocity)
 			if !stepped:
 				velocity = velocity.slide(normal)
 
 """
 ===============
-GroundAccelerate
+LadderMove
 ===============
 """
-func GroundAccelerate(wishdir, wishspeed):
-	var friction : float
+func LadderMove():
+	var wishdir = (global_transform.basis.x * smove + -head.camera.global_transform.basis.z * fmove).normalized()
+	var forward_dir = wishdir.slide(Vector3.UP)
+	wishdir = wishdir.slide(ladder_normal)
 	
-	friction = MOVEFRICTION
+	GroundAccelerate(wishdir, movespeed/2.0)
 	
-	# Friction applied after move release
-	if wishdir != Vector3.ZERO:
-		velocity = velocity.linear_interpolate(wishdir * wishspeed, ACCELERATE * deltaTime) 
-	else:
-		velocity = velocity.linear_interpolate(Vector3.ZERO, friction * deltaTime) 
-
-"""
-===============
-SlopeSpeed
-===============
-"""
-func SlopeSpeed(y_normal):
-	if y_normal <= 0.97:
-		var multiplier = y_normal if velocity[1] > 0.0 else 2.0 - y_normal
-		return clamp(movespeed * multiplier, 5.0, movespeed * 1.2)
-	return movespeed
+	var ccd_max = 5
+	for _i in range(ccd_max):
+		var ccd_step = velocity / ccd_max
+		var collision = move_and_collide(ccd_step * deltaTime)
+		if collision:
+			velocity = velocity.slide(collision.get_normal())
+	
+	StepMove(global_transform.origin, forward_dir * 4.0)
+	
+	prev_y = transform.origin[1]
+	impact_velocity = 0
 
 """
 ===============
@@ -307,6 +364,17 @@ func StepMove(original_pos : Vector3, vel : Vector3):
 
 """
 ===============
+SlopeSpeed
+===============
+"""
+func SlopeSpeed(y_normal):
+	if y_normal <= 0.97:
+		var multiplier = y_normal if velocity[1] > 0.0 else 2.0 - y_normal
+		return clamp(movespeed * multiplier, 5.0, movespeed * 1.2)
+	return movespeed
+
+"""
+===============
 AirMove
 ===============
 """
@@ -332,7 +400,9 @@ func AirMove():
 	
 	impact_velocity = abs(int(round(velocity[1])))
 	
-	var ccd_max = 5
+	#velocity = move_and_slide_with_snap(velocity, ground_normal, Vector3.UP, true, 8)
+	
+	var ccd_max = 8
 	for _i in range(ccd_max):
 		var ccd_step = velocity / ccd_max
 		collision = move_and_collide(ccd_step * deltaTime)
@@ -394,3 +464,37 @@ func AirControl(wishdir):
 	velocity[0] *= speed
 	velocity[1] = original_y
 	velocity[2] *= speed
+
+"""
+===============
+GroundAccelerate
+===============
+"""
+func GroundAccelerate(wishdir, wishspeed):
+	var friction : float
+	var speed    : float 
+	
+	friction = MOVEFRICTION
+	speed = velocity.length()
+	
+	if state == LADDER:
+		friction = 30.0
+	elif speed > 0.0:
+		# If the leading edge is over a dropoff, increase friction
+		var start = global_transform.origin
+		start[0] += velocity[0] / speed * 1.6
+		start[2] += velocity[2] / speed * 1.6
+		var stop = Vector3.ZERO
+		stop[0] = start[0]
+		stop[1] = start[1] - 3.6
+		stop[2] = start[2]
+		var trace = Trace.motion(start, stop, collider.shape, self)
+		if trace[0] == 1:
+			friction *= 2.0
+	
+	# Friction applied after move release
+	if wishdir != Vector3.ZERO:
+		velocity = velocity.linear_interpolate(wishdir * wishspeed, ACCELERATE * deltaTime) 
+	else:
+		velocity = velocity.linear_interpolate(Vector3.ZERO, friction * deltaTime) 
+

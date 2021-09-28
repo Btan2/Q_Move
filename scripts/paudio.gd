@@ -8,7 +8,6 @@ paudio.gd
 """
 
 export var plyr_audio_dir : String = "res://audio/"
-
 onready var player: KinematicBody = get_parent()
 onready var feet: AudioStreamPlayer = $FeetFX # Footstep sfx
 onready var jump: AudioStreamPlayer = $JumpFX # Jump, fall damage sfx
@@ -16,6 +15,8 @@ onready var env: AudioStreamPlayer = $EnvFX # Environment sfx; falling, underwat
 
 var feet_concrete = []
 var jump_concrete = []
+var land_dirt = []
+var land_arr = []
 var feet_arr = []
 var jump_arr = []
 var footstep_volume : float = 0.25
@@ -46,10 +47,13 @@ func _ready() -> void:
 				feet_concrete.append(load(plyr_audio_dir + file))
 			elif file.begins_with("jump_concrete") and file.ends_with("ogg"):
 				jump_concrete.append(load(plyr_audio_dir + file))
+			elif file.begins_with("land_concrete") and file.ends_with("ogg"):
+				land_dirt.append(load(plyr_audio_dir + file))
 			file = dir.get_next()
 	
 	feet_arr = feet_concrete
 	jump_arr = jump_concrete
+	land_arr = land_dirt
 	
 	landhurt = preload("res://audio/land_hurt.ogg")
 	env.stream = preload("res://audio/windfall_1.ogg")
@@ -61,10 +65,8 @@ func _ready() -> void:
 _process
 ===============
 """
-func _process(delta):
-	var vel : float
-	
-	vel = abs(player.velocity.length())
+func _process(_delta):
+	var vel = abs(player.velocity.length())
 	
 	PlayWindrush(vel)
 	
@@ -160,6 +162,19 @@ PlayJump
 func PlayJump() -> void:
 	jump.set_volume_db(linear2db(jump_volume))
 	jump.stream = jump_arr[r.randi_range(0,1)]
+	jump.play()
+
+"""
+===============
+PlayLand
+===============
+"""
+func PlayLand() -> void:
+	step_distance = 0.0
+	
+	jump.stop()
+	jump.set_volume_db(linear2db(jump_volume))
+	jump.stream = land_arr[r.randi_range(0,land_arr.size()-1)]
 	jump.play()
 
 """
