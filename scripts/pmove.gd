@@ -148,8 +148,8 @@ func CategorizePosition():
 		state = FALLING
 		ground_normal = Vector3.UP
 	else: 
-		ground_normal = trace[2]
 		ground_plane = true
+		ground_normal = trace[2]
 		
 		if ground_normal[1] < 0.7:
 			state = FALLING # Too steep!
@@ -236,7 +236,7 @@ func GroundMove():
 			var stepped = false
 			if normal[1] < 0.7 and !is_dead:
 				stepped = StepMove(global_transform.origin, ccd_step.normalized() * ccd_max)
-			if !stepped:
+			if !stepped and velocity.dot(normal) < 0:
 				velocity = velocity.slide(normal)
 
 """

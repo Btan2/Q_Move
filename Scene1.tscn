@@ -186,7 +186,7 @@ material/0 = SubResource( 12 )
 shape = SubResource( 14 )
 
 [node name="MeshInstance8" type="MeshInstance" parent="."]
-transform = Transform( 11.1088, 0, 0, 0, 0.786323, 0, 0, 0, 3.37405, 7.14735, 0.966514, -176.374 )
+transform = Transform( 4.44352, 0, 0, 0, 0.471794, 0, 0, 0, 2.02443, 7.14735, 0.726793, -177.306 )
 mesh = SubResource( 11 )
 material/0 = SubResource( 12 )
 
@@ -210,7 +210,7 @@ material/0 = SubResource( 12 )
 shape = SubResource( 13 )
 
 [node name="MeshInstance9" type="MeshInstance" parent="."]
-transform = Transform( 11.1088, 0, 0, 0, 0.786323, 0, 0, 0, 3.37405, 7.14735, 2.38881, -178.502 )
+transform = Transform( 4.44352, 0, 0, 0, 0.471794, 0, 0, 0, 2.02443, 7.14735, 1.58017, -178.583 )
 mesh = SubResource( 11 )
 material/0 = SubResource( 12 )
 
@@ -222,7 +222,7 @@ material/0 = SubResource( 12 )
 shape = SubResource( 13 )
 
 [node name="MeshInstance10" type="MeshInstance" parent="."]
-transform = Transform( 11.1088, 0, 0, 0, 0.786323, 0, 0, 0, 3.37405, 7.14735, 3.7679, -181.033 )
+transform = Transform( 4.44352, 0, 0, 0, 0.471794, 0, 0, 0, 2.02443, 7.14735, 2.40762, -180.101 )
 mesh = SubResource( 11 )
 material/0 = SubResource( 12 )
 

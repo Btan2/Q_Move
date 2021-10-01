@@ -24,8 +24,8 @@ var jump_volume : float = 0.5
 var step_distance : float = 0.0
 var last_position : Vector3 = Vector3.ZERO
 
-enum {CONCRETE, GRASS, CARPET, TILE, WOOD, PUDDLE, WATER, SAND, ROCK, LADDER_METAL, LADDER_WOOD, ROPE, METAL, AIRVENT}
-var ground_type = CONCRETE
+#enum {CONCRETE, GRASS, CARPET, TILE, WOOD, PUDDLE, WATER, SAND, ROCK, LADDER_METAL, LADDER_WOOD, ROPE, METAL, AIRVENT}
+var ground_type : String = "CONCRETE"
 
 var landhurt
 var r = RandomNumberGenerator.new()
@@ -199,23 +199,24 @@ func SetGroundType(ground) -> void:
 		match(ground):
 			"GRASS":
 				pass
-#				feet_arr = feet_grass
-#				jump_arr = jump_grass
+	#				feet_arr = feet_grass
+	#				jump_arr = jump_grass
 			"TILES":
 				pass
-#				feet_arr = feet_tiles
-#				jump_arr = jump_tiles
-			"LADDER_METAL":
-				pass
-#				feet_arr = ladder_metal
-#				jump_arr = jump_metal
+	#				feet_arr = feet_tiles
+	#				jump_arr = jump_tiles
 			"CONCRETE":
 				feet_arr = feet_concrete
 				jump_arr = jump_concrete
+			"DEFAULT":
+				feet_arr = feet_concrete
+				jump_arr = jump_concrete
 			_:
+				feet_arr = feet_concrete
+				jump_arr = jump_concrete
 				pass
-	
-	ground_type = ground
+		
+		ground_type = ground
 
 ##################################################################################
 # Works well but causes harsh audio pop/crack sound when first played

@@ -23,13 +23,17 @@ func CategorizePosition():
 	
 	# Check for ground 0.1 units below the player
 	down = global_transform.origin + Vector3.DOWN * 0.1
-	trace = Trace.normalfrac(global_transform.origin, down, collider.shape, self)
+	trace = Trace.full(global_transform.origin, down, collider.shape, self)
+	
+	ground_plane = false
 	
 	if trace[0] == 1:
 		state = FALLING
 		ground_normal = Vector3.UP
 	else: 
+		ground_plane = true
 		ground_normal = trace[2]
+		sfx.SetGroundType(trace[3])
 		
 		if ground_normal[1] < 0.7:
 			state = FALLING # Too steep!

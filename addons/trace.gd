@@ -38,9 +38,9 @@ func rest(origin : Vector3, shape, e, mask):
 	return space_state.get_rest_info(params)
 
 """
-===============
+================
 intersect_groups
-===============
+================
 """
 func intersect_groups(origin : Vector3, shape, e, mask):
 	var params : PhysicsShapeQueryParameters
@@ -70,7 +70,6 @@ func intersect_groups(origin : Vector3, shape, e, mask):
 """
 ===============
 normal
-Returns surface normal and end position
 ===============
 """
 func normal(origin, dest, shape, e):
@@ -112,8 +111,6 @@ func normal(origin, dest, shape, e):
 """
 ===============
 normalfrac
-Returns distance fraction, surface normal and
-end position
 ===============
 """
 func normalfrac(origin, dest, shape, e):
@@ -153,8 +150,6 @@ func normalfrac(origin, dest, shape, e):
 """
 ===============
 full
-Returns distance fraction, end position, surface normal 
-and collision group
 ===============
 """
 func full(origin, dest, shape, e):
@@ -182,7 +177,9 @@ func full(origin, dest, shape, e):
 	
 	# Set next parameter position to endpos
 	params.transform.origin = endpos
+	
 	var col_id = 0
+	type = "DEFAULT"
 	
 	# Get collision normal
 	results = space_state.get_rest_info(params)
@@ -198,10 +195,10 @@ func full(origin, dest, shape, e):
 		if !results.empty():
 			for r in results:
 				if r.get("collider_id") == col_id:
-					type = r.get("collider").get_groups()[0]
+					var groups = r.get("collider").get_groups()
+					if len(groups) > 0:
+						type = groups[0]
 					break
-	else:
-		type = ""
 	
 	return Array([fraction, endpos, normal, type])
 
