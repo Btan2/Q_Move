@@ -147,16 +147,16 @@ func CategorizePosition():
 	
 	# Check for ground 0.1 units below the player
 	down = global_transform.origin + Vector3.DOWN * 0.1
-	trace = Trace.normalfrac(global_transform.origin, down, collider.shape, self)
+	trace = Trace.normal(global_transform.origin, down, collider.shape, self)
 	
 	ground_plane = false
 	
-	if trace[0] == 1:
+	if trace.fraction == 1:
 		state = FALLING
 		ground_normal = Vector3.UP
 	else: 
-		ground_normal = trace[2]
 		ground_plane = true
+		ground_normal = trace.normal
 		
 		if ground_normal[1] < 0.7:
 			state = FALLING # Too steep!
@@ -164,7 +164,7 @@ func CategorizePosition():
 			if state == FALLING:
 				CalcFallDamage()
 			
-			global_transform.origin = trace[1] # Clamp to ground
+			global_transform.origin = trace.endpos # Clamp to ground
 			prev_y = global_transform.origin[1]
 			impact_velocity = 0
 			
@@ -344,20 +344,20 @@ func StepMove(original_pos : Vector3, vel : Vector3):
 	up = original_pos + Vector3.UP * STEPSIZE
 	trace = Trace.normal(original_pos, up, collider.shape, self)
 	
-	dest[1] = trace[0][1]
+	dest[1] = trace.endpos[1]
 	
 	# 2nd Trace: Check for collisions from the 1st trace end position
 	# towards the intended destination
-	trace = Trace.normal(trace[0], dest, collider.shape, self)
+	trace = Trace.normal(trace.endpos, dest, collider.shape, self)
 	
 	# 3rd Trace: Check for collisions below the 2nd trace end position
-	down = Vector3(trace[0][0], original_pos[1], trace[0][2])
-	trace = Trace.normal(trace[0], down, collider.shape, self)
+	down = Vector3(trace.endpos[0], original_pos[1], trace.endpos[2])
+	trace = Trace.normal(trace.endpos, down, collider.shape, self)
 	
 	# Move to trace collision position if step is higher than original position and not steep 
-	if trace[0][1] > original_pos[1] and trace[1][1] >= 0.7: 
-		global_transform.origin = trace[0]
-		velocity = velocity.slide(trace[1])
+	if trace.endpos[1] > original_pos[1] and trace.normal[1] >= 0.7: 
+		global_transform.origin = trace.endpos
+		velocity = velocity.slide(trace.normal)
 		return true
 	
 	return false

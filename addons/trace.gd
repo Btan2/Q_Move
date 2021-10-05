@@ -1,5 +1,22 @@
 extends Spatial
 
+var endpos : Vector3
+var fraction : float
+var normal : Vector3
+var type : String
+var groups : PoolStringArray
+var hit : bool
+
+func new():
+	endpos = Vector3.ZERO
+	fraction = 0.0
+	normal = Vector3.ZERO
+	type = ""
+	groups = PoolStringArray()
+	hit = false
+	
+	return self
+
 """
 ===============
 motion
@@ -16,7 +33,8 @@ func motion(origin, dest, shape, e):
 	params.exclude = [e]
 	
 	space_state = get_world().direct_space_state
-	return space_state.cast_motion(params, dest - origin)
+	var results = space_state.cast_motion(params, dest - origin)
+	fraction = results[0]
 
 """
 ===============
@@ -34,8 +52,16 @@ func rest(origin : Vector3, shape, e, mask):
 	params.collide_with_bodies = true
 	params.exclude = [e]
 	
+	hit = false
+	
 	space_state = get_world().direct_space_state
-	return space_state.get_rest_info(params)
+	var results = space_state.get_rest_info(params)
+	
+	if results.empty():
+		return
+	
+	hit = true
+	normal = results.get("normal")
 
 """
 ================
@@ -46,7 +72,8 @@ func intersect_groups(origin : Vector3, shape, e, mask):
 	var params : PhysicsShapeQueryParameters
 	var space_state
 	var results
-	var groups = []
+	
+	groups = PoolStringArray()
 	
 	params = PhysicsShapeQueryParameters.new()
 	params.set_shape(shape)
@@ -55,17 +82,20 @@ func intersect_groups(origin : Vector3, shape, e, mask):
 	params.exclude = [e]
 	params.set_collision_mask(mask)
 	
+	hit = false
+	
 	space_state = get_world().direct_space_state
 	results = space_state.intersect_shape(params, 8)
 	
-	if !results.empty():
-		for r in results:
-			var group = r.get("collider").get_groups()
-			if len(group) > 0:
-				groups.append(group)
-		return groups
+	if results.empty():
+		return
 	
-	return false
+	hit = true
+	
+	for r in results:
+		var group = r.get("collider").get_groups()
+		if len(group) > 0:
+			groups.append(group)
 
 """
 ===============
@@ -73,67 +103,33 @@ normal
 ===============
 """
 func normal(origin, dest, shape, e):
-	var endpos : Vector3 #[0]
-	var normal : Vector3 #[1]
+	var params : PhysicsShapeQueryParameters
+	var space_state
+	var results
 	
 	# Create collision parameters
-	var params = PhysicsShapeQueryParameters.new()
+	params = PhysicsShapeQueryParameters.new()
 	params.set_shape(shape)
 	params.transform.origin = origin
 	params.collide_with_bodies = true
 	params.exclude = [e]
 	#params.set_collision_mask(mask)
 	
-	# Get distance fraction and position of first collision
-	var space_state = get_world().direct_space_state
-	var results = space_state.cast_motion(params, dest - origin)
-	if !results.empty():
-		var fraction = results[0]
-		endpos = origin + (dest - origin).normalized() * (origin.distance_to(dest) * fraction)
-	else:
-		endpos = dest
-		
-		# Didn't hit anything
-		return false
-	
-	# Set next parameter position to endpos
-	params.transform.origin = endpos
-	
-	# Get collision normal
-	results = space_state.get_rest_info(params)
-	if !results.empty():
-		normal = results.get("normal")
-	else:
-		normal = Vector3.UP
-	
-	return Array([endpos, normal])
-
-"""
-===============
-normalfrac
-===============
-"""
-func normalfrac(origin, dest, shape, e):
-	var fraction : float #[0]
-	var endpos : Vector3 #[1]
-	var normal : Vector3 #[2]
-	
-	# Create collision parameters
-	var params = PhysicsShapeQueryParameters.new()
-	params.set_shape(shape)
-	params.transform.origin = origin
-	params.collide_with_bodies = true
-	params.exclude = [e]
+	hit = false
 	
 	# Get distance fraction and position of first collision
-	var space_state = get_world().direct_space_state
-	var results = space_state.cast_motion(params, dest - origin)
+	space_state = get_world().direct_space_state
+	results = space_state.cast_motion(params, dest - origin)
+	
 	if !results.empty():
 		fraction = results[0]
 		endpos = origin + (dest - origin).normalized() * (origin.distance_to(dest) * fraction)
 	else:
 		fraction = 1
 		endpos = dest
+		return # didn't hit anything
+	
+	hit = true
 	
 	# Set next parameter position to endpos
 	params.transform.origin = endpos
@@ -144,8 +140,6 @@ func normalfrac(origin, dest, shape, e):
 		normal = results.get("normal")
 	else:
 		normal = Vector3.UP
-	
-	return Array([fraction, endpos, normal])
 
 """
 ===============
@@ -153,32 +147,37 @@ full
 ===============
 """
 func full(origin, dest, shape, e):
-	var fraction : float   #[0]
-	var endpos   : Vector3 #[1]
-	var normal   : Vector3 #[2]
-	var type     : String  #[3]
+	var params : PhysicsShapeQueryParameters
+	var space_state
+	var results
+	var col_id
 	
 	# Create collision parameters
-	var params = PhysicsShapeQueryParameters.new()
+	params = PhysicsShapeQueryParameters.new()
 	params.set_shape(shape)
 	params.transform.origin = origin
 	params.collide_with_bodies = true
 	params.exclude = [e]
 	
+	hit = false
+	
 	# Get distance fraction and position of first collision
-	var space_state = get_world().direct_space_state
-	var results = space_state.cast_motion(params, dest - origin)
+	space_state = get_world().direct_space_state
+	results = space_state.cast_motion(params, dest - origin)
 	if !results.empty():
 		fraction = results[0]
 		endpos = origin + (dest - origin).normalized() * (origin.distance_to(dest) * fraction)
 	else:
 		fraction = 1
 		endpos = dest
+		return # Didn't hit anything
+	
+	hit = true
 	
 	# Set next parameter position to endpos
 	params.transform.origin = endpos
 	
-	var col_id = 0
+	col_id = 0
 	type = "DEFAULT"
 	
 	# Get collision normal
@@ -199,8 +198,6 @@ func full(origin, dest, shape, e):
 					if len(groups) > 0:
 						type = groups[0]
 					break
-	
-	return Array([fraction, endpos, normal, type])
 
 
 #"""

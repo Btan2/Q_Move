@@ -19,21 +19,23 @@ Check if the player is touching the ground
 """
 func CategorizePosition():
 	var down : Vector3
-	var trace
+	var trace : Trace
+	
+	trace = Trace.new()
 	
 	# Check for ground 0.1 units below the player
 	down = global_transform.origin + Vector3.DOWN * 0.1
-	trace = Trace.full(global_transform.origin, down, collider.shape, self)
+	trace.full(global_transform.origin, down, collider.shape, self)
 	
 	ground_plane = false
 	
-	if trace[0] == 1:
+	if trace.fraction == 1:
 		state = FALLING
 		ground_normal = Vector3.UP
 	else: 
 		ground_plane = true
-		ground_normal = trace[2]
-		sfx.SetGroundType(trace[3])
+		ground_normal = trace.normal
+		sfx.SetGroundType(trace.type)
 		
 		if ground_normal[1] < 0.7:
 			state = FALLING # Too steep!
@@ -41,7 +43,7 @@ func CategorizePosition():
 			if state == FALLING:
 				CalcFallDamage()
 			
-			global_transform.origin = trace[1] # Clamp to ground
+			global_transform.origin = trace.endpos # Clamp to ground
 			prev_y = global_transform.origin[1]
 			impact_velocity = 0
 			
@@ -70,7 +72,7 @@ LadderCheck
 """
 func LadderCheck():
 	var shape : CylinderShape
-	var trace
+	var trace : Trace
 	
 	if crouch_press: 
 		return
@@ -82,24 +84,25 @@ func LadderCheck():
 	shape.margin = float(collider.shape.margin)
 	
 	# Check if touching a ladder
-	trace = Trace.intersect_groups(global_transform.origin, shape, self, LADDER_LAYER)
-	if !trace:
+	trace = Trace.new()
+	trace.intersect_groups(global_transform.origin, shape, self, LADDER_LAYER)
+	
+	if !trace.hit:
 		return
 	
 	# Set ladder type
-	if len(trace) > 0:
-		for g in trace:
-			if str(g) == "[LADDER_METAL]":
-				pass
-				#sfx.set_ground_type("LADDER_METAL")
-			elif str(g) == "[LADDER_WOOD]":
-				pass
-				#sfx.set_ground_type("LADDER_WOOD")
+	for g in trace.groups:
+		if str(g) == "[LADDER_METAL]":
+			pass
+			#sfx.set_ground_type("LADDER_METAL")
+		elif str(g) == "[LADDER_WOOD]":
+			pass
+			#sfx.set_ground_type("LADDER_WOOD")
 	
 	# Get ladder normal
-	trace = Trace.rest(global_transform.origin, shape, self, LADDER_LAYER)
-	if !trace.empty():
-		ladder_normal = trace.get("normal")
+	trace.rest(global_transform.origin, shape, self, LADDER_LAYER)
+	if trace.hit:
+		ladder_normal = trace.normal
 	
 	# Check if moving away from the ladder
 	var dir = (transform.basis.x * smove + -transform.basis.z * fmove).normalized()
@@ -164,8 +167,9 @@ func GroundAccelerate(wishdir, wishspeed):
 		stop[0] = start[0]
 		stop[1] = start[1] - 3.6
 		stop[2] = start[2]
-		var trace = Trace.motion(start, stop, collider.shape, self)
-		if trace[0] == 1:
+		var trace = Trace.new()
+		trace.motion(start, stop, collider.shape, self)
+		if trace.fraction == 1:
 			friction *= 2.0
 	
 	# Friction applied after move release

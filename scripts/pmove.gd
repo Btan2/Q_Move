@@ -120,9 +120,10 @@ func Crouch():
 			collider.shape.height -= crouch_speed 
 	else:
 		if collider.shape.height < PLAYER_HEIGHT:
-			var dest = transform.origin + Vector3.UP * crouch_speed
-			var trace = Trace.motion(transform.origin, dest, collider.shape, self)
-			if trace[0] == 1:
+			var up = transform.origin + Vector3.UP * crouch_speed
+			var trace = Trace.new()
+			trace.motion(transform.origin, up, collider.shape, self)
+			if trace.fraction == 1:
 				collider.shape.height += crouch_speed
 	
 	collider.shape.height = clamp(collider.shape.height, CROUCH_HEIGHT, PLAYER_HEIGHT)
@@ -135,21 +136,22 @@ Check if the player is touching the ground
 ===============
 """
 func CategorizePosition():
-	var down : Vector3
-	var trace
+	var down  : Vector3
+	var trace : Trace
 	
 	# Check for ground 0.1 units below the player
 	down = global_transform.origin + Vector3.DOWN * 0.1
-	trace = Trace.normalfrac(global_transform.origin, down, collider.shape, self)
+	trace = Trace.new()
+	trace.normal(global_transform.origin, down, collider.shape, self)
 	
 	ground_plane = false
 	
-	if trace[0] == 1:
+	if trace.fraction == 1:
 		state = FALLING
 		ground_normal = Vector3.UP
 	else: 
 		ground_plane = true
-		ground_normal = trace[2]
+		ground_normal = trace.normal
 		
 		if ground_normal[1] < 0.7:
 			state = FALLING # Too steep!
@@ -157,7 +159,7 @@ func CategorizePosition():
 			if state == FALLING:
 				CalcFallDamage()
 			
-			global_transform.origin = trace[1] # Clamp to ground
+			global_transform.origin = trace.endpos # Clamp to ground
 			prev_y = global_transform.origin[1]
 			impact_velocity = 0
 			
@@ -179,7 +181,7 @@ func CalcFallDamage():
 	else:
 		if fall_dist > PLAYER_HEIGHT:
 			sfx.PlayLand()
-		if fall_dist >= 8:
+		if fall_dist >= 6:
 			head.ParseDamage(Vector3.ONE * float(impact_velocity / 8))
 
 """
@@ -226,6 +228,7 @@ func GroundMove():
 	wishdir = wishdir.slide(ground_normal)
 	
 	GroundAccelerate(wishdir, SlopeSpeed(ground_normal[1]))
+	var original_velocity = velocity
 	
 	var ccd_max = 5
 	for _i in range(ccd_max):
@@ -233,11 +236,55 @@ func GroundMove():
 		var collision = move_and_collide(ccd_step * deltaTime)
 		if collision:
 			var normal = collision.get_normal()
-			var stepped = false
-			if normal[1] < 0.7 and !is_dead:
-				stepped = StepMove(global_transform.origin, ccd_step.normalized() * ccd_max)
-			if !stepped and velocity.dot(normal) < 0:
+			if normal[1] < 0.7: #and !is_dead:
+				var stepped = StepMove(global_transform.origin, velocity.normalized() * 10)
+				if !stepped and velocity.dot(normal) < 0:
+					velocity = velocity.slide(normal)
+			else:
 				velocity = velocity.slide(normal)
+
+"""
+===============
+StepMove
+===============
+"""
+func StepMove(original_pos : Vector3, vel : Vector3):
+	var dest : Vector3
+	var down : Vector3
+	var up   : Vector3
+	var trace : Trace
+	
+	trace = Trace.new()
+	
+	# Get destination position that is one step-size above the intended move
+	dest = original_pos
+	dest[0] += vel[0] * deltaTime
+	dest[1] += STEPSIZE
+	dest[2] += vel[2] * deltaTime
+	
+	# 1st Trace: check for collisions one stepsize above the original position
+	up = original_pos + Vector3.UP * STEPSIZE
+	trace.normal(original_pos, up, collider.shape, self)
+	
+	dest[1] = trace.endpos[1]
+	
+	# 2nd Trace: Check for collisions one stepsize above the original position
+	# and along the intended destination
+	trace.normal(trace.endpos, dest, collider.shape, self)
+	
+	# 3rd Trace: Check for collisions below the stepsize until 
+	# level with original position
+	down = Vector3(trace.endpos[0], original_pos[1], trace.endpos[2])
+	trace.normal(trace.endpos, down, collider.shape, self)
+	
+	# Move to trace collision position if step is higher than original position 
+	# and not steep 
+	if trace.endpos[1] > original_pos[1] and trace.normal[1] >= 0.7: 
+		global_transform.origin = trace.endpos
+		#velocity = velocity.slide(trace.normal)
+		return true
+	
+	return false
 
 """
 ===============
@@ -265,45 +312,6 @@ func SlopeSpeed(y_normal):
 		var multiplier = y_normal if velocity[1] > 0.0 else 2.0 - y_normal
 		return clamp(movespeed * multiplier, 5.0, movespeed * 1.2)
 	return movespeed
-
-"""
-===============
-StepMove
-===============
-"""
-func StepMove(original_pos : Vector3, vel : Vector3):
-	var dest : Vector3
-	var down : Vector3
-	var up   : Vector3
-	var trace
-	
-	# Get destination position that is one step-size above the intended move
-	dest = original_pos
-	dest[0] += vel[0] * deltaTime
-	dest[1] += STEPSIZE
-	dest[2] += vel[2] * deltaTime
-	
-	# 1st Trace: check for collisions one stepsize above the original position
-	up = original_pos + Vector3.UP * STEPSIZE
-	trace = Trace.normal(original_pos, up, collider.shape, self)
-	
-	dest[1] = trace[0][1]
-	
-	# 2nd Trace: Check for collisions from the 1st trace end position
-	# towards the intended destination
-	trace = Trace.normal(trace[0], dest, collider.shape, self)
-	
-	# 3rd Trace: Check for collisions below the 2nd trace end position
-	down = Vector3(trace[0][0], original_pos[1], trace[0][2])
-	trace = Trace.normal(trace[0], down, collider.shape, self)
-	
-	# Move to trace collision position if step is higher than original position and not steep 
-	if trace[0][1] > original_pos[1] and trace[1][1] >= 0.7: 
-		global_transform.origin = trace[0]
-		velocity = velocity.slide(trace[1])
-		return true
-	
-	return false
 
 """
 ===============
@@ -338,7 +346,8 @@ func AirMove():
 		collision = move_and_collide(ccd_step * deltaTime)
 		if collision:
 			var normal = collision.get_normal()
-			velocity = velocity.slide(normal)
+			if velocity.dot(normal) < 0:
+				velocity = velocity.slide(normal)
 
 """
 ===============
@@ -394,3 +403,24 @@ func AirControl(wishdir):
 	velocity[0] *= speed
 	velocity[1] = original_y
 	velocity[2] *= speed
+
+"""
+==================
+ClipVelocity
+==================
+"""
+func ClipVelocity(vel : Vector3, normal : Vector3, overbounce : float):
+	var backoff : float
+	var change  : float
+	var out     : Vector3
+	
+	out = vel
+	backoff = vel.dot(normal) * overbounce
+	
+	for i in range(3):
+		change = normal[i] * backoff
+		out[i] -= - change
+		if out[i] > -0.1 and out[i] < 0.1:
+			out[i] = 0
+	
+	return out
