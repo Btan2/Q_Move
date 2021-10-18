@@ -3,9 +3,8 @@ extends KinematicBody
 """
 pmove.gd
 
-- Player movement controller
-- Player will still slide down slopes
-- Only tested with simple 3D shapes such as boxes and spheres
+- Standard player movement controller
+- Player will slowly slide down slopes
 """
 
 onready var collider : CollisionShape = $CollisionShape
@@ -13,7 +12,7 @@ onready var head : Spatial = $Head
 onready var sfx : Node = $Audio
 
 const MAXSPEED : float = 32.0        # default: 32.0
-const WALKSPEED : float = 12.0       # default: 16.0
+const WALKSPEED : float = 16.0       # default: 16.0
 const STOPSPEED : float = 10.0       # default: 10.0
 const GRAVITY : float = 80.0         # default: 80.0
 const ACCELERATE : float = 10.0      # default: 10.0
@@ -23,8 +22,8 @@ const JUMPFORCE : float = 27.0       # default: 27.0
 const AIRCONTROL : float = 0.9       # default: 0.9
 const STEPSIZE : float = 1.8         # default: 1.8
 const MAXHANG : float = 0.2          # defualt: 0.2
-const PLAYER_HEIGHT : float = 3.6
-const CROUCH_HEIGHT : float = 2.0
+const PLAYER_HEIGHT : float = 3.6    # default: 3.6
+const CROUCH_HEIGHT : float = 2.0    # default: 2.0
 
 var deltaTime : float = 0.0
 var movespeed : float = 32.0
@@ -88,28 +87,28 @@ _physics_process
 func _physics_process(delta):
 	deltaTime = delta
 	
-	Crouch()
-	CategorizePosition()
-	JumpButton()
-	CheckState()
+	crouch()
+	categorize_position()
+	jump_button()
+	check_state()
 
 """
 ===============
-CheckState
+check_state
 ===============
 """
-func CheckState():
+func check_state():
 	if state == GROUNDED:
-		GroundMove()
+		ground_move()
 	elif state == FALLING:
-		AirMove()
+		air_move()
 
 """
 ===============
-Crouch
+crouch
 ===============
 """
-func Crouch():
+func crouch():
 	var crouch_speed = 20.0 * deltaTime
 	
 	if crouch_press:
@@ -131,18 +130,19 @@ func Crouch():
 
 """
 ===============
-CategorizePosition
+categorize_position
+
 Check if the player is touching the ground
 ===============
 """
-func CategorizePosition():
+func categorize_position():
 	var down  : Vector3
 	var trace : Trace
 	
 	# Check for ground 0.1 units below the player
 	down = global_transform.origin + Vector3.DOWN * 0.1
 	trace = Trace.new()
-	trace.normal(global_transform.origin, down, collider.shape, self)
+	trace.standard(global_transform.origin, down, collider.shape, self)
 	
 	ground_plane = false
 	
@@ -157,7 +157,7 @@ func CategorizePosition():
 			state = FALLING # Too steep!
 		else:
 			if state == FALLING:
-				CalcFallDamage()
+				calc_fall_damage()
 			
 			global_transform.origin = trace.endpos # Clamp to ground
 			prev_y = global_transform.origin[1]
@@ -167,29 +167,29 @@ func CategorizePosition():
 
 """
 ===============
-CalcFallDamage
+calc_fall_damage
 ===============
 """
-func CalcFallDamage():
+func calc_fall_damage():
 	var fall_dist : int
 	
 	fall_dist = int(round(abs(prev_y - global_transform.origin[1])))
-	if fall_dist >= 20 && impact_velocity >= 45: 
+	if fall_dist >= 20 and impact_velocity >= 45: 
 		jump_press = false
-		sfx.PlayLandHurt()
-		head.ParseDamage(Vector3.ONE * float(impact_velocity / 6))
+		sfx.play_land_hurt()
+		head.parse_damage(Vector3.ONE * float(impact_velocity / 6))
 	else:
 		if fall_dist > PLAYER_HEIGHT:
-			sfx.PlayLand()
+			sfx.play_land()
 		if fall_dist >= 6:
-			head.ParseDamage(Vector3.ONE * float(impact_velocity / 8))
+			head.parse_damage(Vector3.ONE * float(impact_velocity / 8))
 
 """
 ===============
-JumpButton
+jump_button
 ===============
 """
-func JumpButton():
+func jump_button():
 	if is_dead: 
 		return
 	
@@ -208,9 +208,9 @@ func JumpButton():
 		jump_press = false
 		hangtime = 0.0
 		
-		sfx.PlayJump()
+		sfx.play_jump()
 		
-		# Make sure jump velocity is positive if falling
+		# Make sure jump velocity is positive if moving down
 		if state == FALLING or velocity[1] < 0.0:
 			velocity[1] = JUMPFORCE
 		else:
@@ -218,17 +218,17 @@ func JumpButton():
 
 """
 ===============
-GroundMove
+ground_move
 ===============
 """
-func GroundMove():
+func ground_move():
 	var wishdir : Vector3
 	
 	wishdir = (global_transform.basis.x * smove + -global_transform.basis.z * fmove).normalized()
 	wishdir = wishdir.slide(ground_normal)
 	
-	GroundAccelerate(wishdir, SlopeSpeed(ground_normal[1]))
-	var original_velocity = velocity
+	ground_accelerate(wishdir, slope_speed(ground_normal[1]))
+	#var original_velocity = velocity
 	
 	var ccd_max = 5
 	for _i in range(ccd_max):
@@ -236,8 +236,8 @@ func GroundMove():
 		var collision = move_and_collide(ccd_step * deltaTime)
 		if collision:
 			var normal = collision.get_normal()
-			if normal[1] < 0.7: #and !is_dead:
-				var stepped = StepMove(global_transform.origin, velocity.normalized() * 10)
+			if normal[1] < 0.7 and !is_dead:
+				var stepped = step_move(global_transform.origin, velocity.normalized() * 10)
 				if !stepped and velocity.dot(normal) < 0:
 					velocity = velocity.slide(normal)
 			else:
@@ -245,13 +245,13 @@ func GroundMove():
 
 """
 ===============
-StepMove
+step_move
 ===============
 """
-func StepMove(original_pos : Vector3, vel : Vector3):
-	var dest : Vector3
-	var down : Vector3
-	var up   : Vector3
+func step_move(original_pos : Vector3, vel : Vector3):
+	var dest  : Vector3
+	var down  : Vector3
+	var up    : Vector3
 	var trace : Trace
 	
 	trace = Trace.new()
@@ -264,18 +264,18 @@ func StepMove(original_pos : Vector3, vel : Vector3):
 	
 	# 1st Trace: check for collisions one stepsize above the original position
 	up = original_pos + Vector3.UP * STEPSIZE
-	trace.normal(original_pos, up, collider.shape, self)
+	trace.standard(original_pos, up, collider.shape, self)
 	
 	dest[1] = trace.endpos[1]
 	
 	# 2nd Trace: Check for collisions one stepsize above the original position
 	# and along the intended destination
-	trace.normal(trace.endpos, dest, collider.shape, self)
+	trace.standard(trace.endpos, dest, collider.shape, self)
 	
 	# 3rd Trace: Check for collisions below the stepsize until 
 	# level with original position
 	down = Vector3(trace.endpos[0], original_pos[1], trace.endpos[2])
-	trace.normal(trace.endpos, down, collider.shape, self)
+	trace.standard(trace.endpos, down, collider.shape, self)
 	
 	# Move to trace collision position if step is higher than original position 
 	# and not steep 
@@ -288,10 +288,10 @@ func StepMove(original_pos : Vector3, vel : Vector3):
 
 """
 ===============
-GroundAccelerate
+ground_accelerate
 ===============
 """
-func GroundAccelerate(wishdir, wishspeed):
+func ground_accelerate(wishdir : Vector3, wishspeed : float):
 	var friction : float
 	
 	friction = MOVEFRICTION
@@ -304,10 +304,12 @@ func GroundAccelerate(wishdir, wishspeed):
 
 """
 ===============
-SlopeSpeed
+slope_speed
+
+Change velocity while moving up/down sloped ground
 ===============
 """
-func SlopeSpeed(y_normal):
+func slope_speed(y_normal : float):
 	if y_normal <= 0.97:
 		var multiplier = y_normal if velocity[1] > 0.0 else 2.0 - y_normal
 		return clamp(movespeed * multiplier, 5.0, movespeed * 1.2)
@@ -315,22 +317,21 @@ func SlopeSpeed(y_normal):
 
 """
 ===============
-AirMove
+air_move
 ===============
 """
-func AirMove():
+func air_move():
 	var wishdir : Vector3
-	var collision
 	
 	wishdir = (global_transform.basis.x * smove + -global_transform.basis.z * fmove).normalized()
 	wishdir = wishdir.slide(ground_normal)
 	#wishdir[1] = 0.0
 	
-	AirAccelerate(wishdir, STOPSPEED if velocity.dot(wishdir) < 0 else AIRACCELERATE)
+	air_accelerate(wishdir, STOPSPEED if velocity.dot(wishdir) < 0 else AIRACCELERATE)
 	
 	if !ground_plane:
 		if (AIRCONTROL > 0.0): 
-			AirControl(wishdir)
+			air_control(wishdir)
 	
 	velocity[1] -= GRAVITY * deltaTime
 	
@@ -343,7 +344,7 @@ func AirMove():
 	var ccd_max = 5
 	for _i in range(ccd_max):
 		var ccd_step = velocity / ccd_max
-		collision = move_and_collide(ccd_step * deltaTime)
+		var collision = move_and_collide(ccd_step * deltaTime)
 		if collision:
 			var normal = collision.get_normal()
 			if velocity.dot(normal) < 0:
@@ -351,15 +352,15 @@ func AirMove():
 
 """
 ===============
-AirAccelerate
+air_accelerate
 ===============
 """
-func AirAccelerate(wishdir, accel):
+func air_accelerate(wishdir : Vector3, accel : float):
 	var addspeed     : float
 	var accelspeed   : float
 	var currentspeed : float
 	
-	var wishspeed = SlopeSpeed(ground_normal[1])
+	var wishspeed = slope_speed(ground_normal[1])
 	
 	currentspeed = velocity.dot(wishdir)
 	addspeed = wishspeed - currentspeed
@@ -375,10 +376,10 @@ func AirAccelerate(wishdir, accel):
 
 """
 ===============
-AirControl
+air_control
 ===============
 """
-func AirControl(wishdir):
+func air_control(wishdir : Vector3):
 	var dot        : float
 	var speed      : float
 	var original_y : float
@@ -406,21 +407,32 @@ func AirControl(wishdir):
 
 """
 ==================
-ClipVelocity
+push
+
+Can be used for rocket jumps, impact damage etc.
 ==================
 """
-func ClipVelocity(vel : Vector3, normal : Vector3, overbounce : float):
-	var backoff : float
-	var change  : float
-	var out     : Vector3
-	
-	out = vel
-	backoff = vel.dot(normal) * overbounce
-	
+func push(force : float, dir : Vector3, mass : float):
 	for i in range(3):
-		change = normal[i] * backoff
-		out[i] -= - change
-		if out[i] > -0.1 and out[i] < 0.1:
-			out[i] = 0
-	
-	return out
+		velocity[i] += force * dir[i] / mass
+
+#"""
+#==================
+#ClipVelocity
+#==================
+#"""
+#func ClipVelocity(vel : Vector3, normal : Vector3, overbounce : float):
+#	var backoff : float
+#	var change  : float
+#	var out     : Vector3
+#
+#	out = vel
+#	backoff = vel.dot(normal) * overbounce
+#
+#	for i in range(3):
+#		change = normal[i] * backoff
+#		out[i] -= - change
+#		if out[i] > -0.1 and out[i] < 0.1:
+#			out[i] = 0
+#
+#	return out

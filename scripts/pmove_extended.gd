@@ -1,11 +1,12 @@
 extends "res://scripts/pmove.gd"
 
 """
-pmove_advanced.gd
+pmove_extended.gd
 
-- Extends player movement controller (pmove.gd)
+- Extends pmove.gd
 - Ladder climbing and dismount
 - Leading edge drop off check
+- Sets footstep sfx ground type
 """
 
 var ladder_normal : Vector3 = Vector3.UP
@@ -13,12 +14,13 @@ const LADDER_LAYER = 2
 
 """
 ===============
-CategorizePosition
+categorize_position
+
 Check if the player is touching the ground
 ===============
 """
-func CategorizePosition():
-	var down : Vector3
+func categorize_position():
+	var down  : Vector3
 	var trace : Trace
 	
 	trace = Trace.new()
@@ -35,13 +37,13 @@ func CategorizePosition():
 	else: 
 		ground_plane = true
 		ground_normal = trace.normal
-		sfx.SetGroundType(trace.type)
+		sfx.set_ground_type(trace.type)
 		
 		if ground_normal[1] < 0.7:
 			state = FALLING # Too steep!
 		else:
 			if state == FALLING:
-				CalcFallDamage()
+				calc_fall_damage()
 			
 			global_transform.origin = trace.endpos # Clamp to ground
 			prev_y = global_transform.origin[1]
@@ -49,35 +51,35 @@ func CategorizePosition():
 			
 			state = GROUNDED
 	
-	LadderCheck()
+	ladder_check()
 
 """
 ===============
-CheckState
+check_state
 ===============
 """
-func CheckState():
+func check_state():
 	match(state):
 		LADDER:
-			LadderMove()
+			ladder_move()
 		GROUNDED:
-			GroundMove()
+			ground_move()
 		FALLING:
-			AirMove()
+			air_move()
 
 """
 ===============
-LadderCheck
+ladder_check
 ===============
 """
-func LadderCheck():
+func ladder_check():
 	var shape : CylinderShape
 	var trace : Trace
 	
 	if crouch_press: 
 		return
 	
-	# Use a slightly thicker version of player cylinder for ladder detection
+	# Use a slightly thicker cylinder shape for ladder detection
 	shape = CylinderShape.new()
 	shape.radius = float(collider.shape.radius + 0.05)
 	shape.height = float(collider.shape.height)
@@ -91,13 +93,13 @@ func LadderCheck():
 		return
 	
 	# Set ladder type
-	for g in trace.groups:
-		if str(g) == "[LADDER_METAL]":
-			pass
-			#sfx.set_ground_type("LADDER_METAL")
-		elif str(g) == "[LADDER_WOOD]":
-			pass
-			#sfx.set_ground_type("LADDER_WOOD")
+	#for g in trace.groups:
+		#if str(g) == "[LADDER_METAL]":
+			#pass
+			##sfx.set_ground_type("LADDER_METAL")
+		#elif str(g) == "[LADDER_WOOD]":
+			#pass
+			##sfx.set_ground_type("LADDER_WOOD")
 	
 	# Get ladder normal
 	trace.rest(global_transform.origin, shape, self, LADDER_LAYER)
@@ -122,15 +124,15 @@ func LadderCheck():
 
 """
 ===============
-LadderMove
+ladder_move
 ===============
 """
-func LadderMove():
+func ladder_move():
 	var wishdir = (global_transform.basis.x * smove + -head.camera.global_transform.basis.z * fmove).normalized()
 	var forward_dir = wishdir.slide(Vector3.UP)
 	wishdir = wishdir.slide(ladder_normal)
 	
-	GroundAccelerate(wishdir, movespeed/2.0)
+	ground_accelerate(wishdir, movespeed/2.0)
 	
 	var ccd_max = 5
 	for _i in range(ccd_max):
@@ -139,17 +141,17 @@ func LadderMove():
 		if collision:
 			velocity = velocity.slide(collision.get_normal())
 	
-	StepMove(global_transform.origin, forward_dir * 4.0)
+	step_move(global_transform.origin, forward_dir * 4.0)
 	
 	prev_y = transform.origin[1]
 	impact_velocity = 0
 
 """
 ===============
-GroundAccelerate
+ground_accelerate
 ===============
 """
-func GroundAccelerate(wishdir, wishspeed):
+func ground_accelerate(wishdir : Vector3, wishspeed : float):
 	var friction : float
 	var speed    : float 
 	

@@ -1,5 +1,13 @@
 extends Spatial
 
+"""
+trace.gd
+
+- Uses direct_space_state functions for 3D shape collision testing
+- Various functions for specific collision tests
+- Treated as an object to simplify getting collision info
+"""
+
 var endpos : Vector3
 var fraction : float
 var normal : Vector3
@@ -7,6 +15,11 @@ var type : String
 var groups : PoolStringArray
 var hit : bool
 
+"""
+===============
+new
+===============
+"""
 func new():
 	endpos = Vector3.ZERO
 	fraction = 0.0
@@ -22,7 +35,7 @@ func new():
 motion
 ===============
 """
-func motion(origin, dest, shape, e):
+func motion(origin : Vector3, dest : Vector3, shape : Shape, e):
 	var params
 	var space_state
 	
@@ -41,7 +54,7 @@ func motion(origin, dest, shape, e):
 rest
 ===============
 """
-func rest(origin : Vector3, shape, e, mask):
+func rest(origin : Vector3, shape : Shape, e, mask):
 	var params
 	var space_state
 	
@@ -68,7 +81,7 @@ func rest(origin : Vector3, shape, e, mask):
 intersect_groups
 ================
 """
-func intersect_groups(origin : Vector3, shape, e, mask):
+func intersect_groups(origin : Vector3, shape : Shape, e, mask):
 	var params : PhysicsShapeQueryParameters
 	var space_state
 	var results
@@ -99,10 +112,10 @@ func intersect_groups(origin : Vector3, shape, e, mask):
 
 """
 ===============
-normal
+standard
 ===============
 """
-func normal(origin, dest, shape, e):
+func standard(origin : Vector3, dest : Vector3, shape : Shape, e):
 	var params : PhysicsShapeQueryParameters
 	var space_state
 	var results
@@ -146,7 +159,7 @@ func normal(origin, dest, shape, e):
 full
 ===============
 """
-func full(origin, dest, shape, e):
+func full(origin : Vector3, dest : Vector3, shape : Shape, e):
 	var params : PhysicsShapeQueryParameters
 	var space_state
 	var results
@@ -178,7 +191,7 @@ func full(origin, dest, shape, e):
 	params.transform.origin = endpos
 	
 	col_id = 0
-	type = "DEFAULT"
+	#type = "DEFAULT"
 	
 	# Get collision normal
 	results = space_state.get_rest_info(params)
@@ -194,9 +207,9 @@ func full(origin, dest, shape, e):
 		if !results.empty():
 			for r in results:
 				if r.get("collider_id") == col_id:
-					var groups = r.get("collider").get_groups()
-					if len(groups) > 0:
-						type = groups[0]
+					var g = r.get("collider").get_groups()
+					if len(g) > 0:
+						type = g[0]
 					break
 
 
