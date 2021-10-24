@@ -71,10 +71,6 @@ func _input(_event):
 	
 	if Input.is_action_pressed("crouch"):
 		crouch_press = true
-		if movespeed == MAXSPEED:
-			movespeed = WALKSPEED
-		else:
-			movespeed = WALKSPEED / 2.0
 	else:
 		crouch_press = false
 	
@@ -110,6 +106,11 @@ crouch
 """
 func crouch():
 	var crouch_speed = 20.0 * deltaTime
+	
+	if collider.shape.height >= (PLAYER_HEIGHT - 0.1):
+		movespeed = MAXSPEED
+	else:
+		movespeed = WALKSPEED
 	
 	if crouch_press:
 		# snap crouch height while falling
