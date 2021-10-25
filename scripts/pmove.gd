@@ -35,6 +35,7 @@ var impact_velocity : float = 0.0
 var is_dead : bool = false
 var jump_press : bool = false
 var crouch_press : bool = false
+var toggle_walk : bool = false
 var ground_plane : bool = false
 var prev_y : float = 0.0
 var velocity : Vector3 = Vector3.ZERO
@@ -48,6 +49,11 @@ _input
 ===============
 """
 func _input(_event):
+	if Input.is_key_pressed(KEY_CAPSLOCK):
+		if toggle_walk:
+			toggle_walk = false
+		else:
+			toggle_walk = true
 	
 	if Input.is_key_pressed(KEY_K):
 		is_dead = true if !is_dead else false
@@ -71,9 +77,12 @@ func _input(_event):
 	
 	if Input.is_action_pressed("crouch"):
 		crouch_press = true
+		if movespeed == MAXSPEED:
+			movespeed = WALKSPEED
+		else:
+			movespeed = WALKSPEED / 2.0
 	else:
 		crouch_press = false
-	
 
 """
 ===============
@@ -107,9 +116,7 @@ crouch
 func crouch():
 	var crouch_speed = 20.0 * deltaTime
 	
-	if collider.shape.height >= (PLAYER_HEIGHT - 0.1):
-		movespeed = MAXSPEED
-	else:
+	if collider.shape.height <= (PLAYER_HEIGHT - 0.1):
 		movespeed = WALKSPEED
 	
 	if crouch_press:
