@@ -7,7 +7,7 @@ NB: The next update will be adjusted to work in Godot 3.5. Additional features (
 <i>The aim is to update the project along with each stable release until Godot 4 is released.</i>
 
 # About
-The aim of this project is to provide Godot devlopers with a robust character controller that delivers the same level of responsiveness as Quake and Half-Life. A majority of Quake-like controllers seem to lack the ability to handle steps and often have to resort to rudimentary workarounds such as invisible ramps or singular raycast lines which do not represent the player's hull accurately. This controller is an attempt to fix this issue and to recreate the idiosyncratic behaviours of the Quake and Half-Life controllers.
+The aim of this project is to provide Godot developers with a robust character controller that delivers the same level of responsiveness as Quake and Half-Life. A majority of Quake-like controllers seem to lack the ability to handle steps and often have to resort to rudimentary workarounds such as invisible ramps or singular raycast lines which do not represent the player's hull accurately. This controller is an attempt to fix this issue and to recreate the idiosyncratic behaviours of the Quake and Half-Life controllers.
 
 A generalised description on how the step function works can be found on my website: https://thelowrooms.com/articledir/programming_stepclimbing.php
 
