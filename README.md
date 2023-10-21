@@ -1,10 +1,11 @@
 # Q_Move
 A Quake-like controller for Godot.
 
-# Current Engine Version: Godot 3.3.4
-NB: The next update will be adjusted to work in Godot 3.5. Additional features (pmove_full, ladder climbing and etc.) will be temporarily removed and reintroduced at a later date.
+# Current Engine Version: Godot 4.1
+Status: The controller is now being re-built using a custom collision detection & response system. Additional work is currently underway to ensure the system is optimized.
 <br>
-<i>The aim is to update the project along with each stable release until Godot 4 is released.</i>
+![](https://github.com/Btan2/Q_Move/assets/17605586/21561634-6415-4c54-baa8-37ace84524ce)
+
 
 # About
 The aim of this project is to provide Godot developers with a robust character controller that delivers the same level of responsiveness as Quake and Half-Life. A majority of Quake-like controllers seem to lack the ability to handle steps and often have to resort to rudimentary workarounds such as invisible ramps or singular raycast lines which do not represent the player's hull accurately. This controller is an attempt to fix this issue and to recreate the idiosyncratic behaviours of the Quake and Half-Life controllers.
