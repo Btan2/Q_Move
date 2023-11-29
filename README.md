@@ -4,7 +4,8 @@ A Quake-like controller for Godot.
 # Current Engine Version: Godot 4.1
 Status: The controller is now being re-built using a custom collision detection & response system. Additional work is currently underway to ensure the system is optimized.
 <br>
-![](https://github.com/Btan2/Q_Move/assets/17605586/21561634-6415-4c54-baa8-37ace84524ce)
+![output2](https://github.com/Btan2/Q_Move/assets/17605586/4e9d9996-21da-4a20-8eef-8ee7c48bb004)
+
 
 
 # About
