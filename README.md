@@ -5,7 +5,7 @@ A Quake-like controller for Godot.
 <br>**Updated Version:** Godot 4.2.1 Mono
 <br>
 <br>
-![output2](https://github.com/Btan2/Q_Move/assets/17605586/6001394d-276a-442a-90ad-d20b3d69cf2e)
+<img src="https://github.com/Btan2/Q_Move/assets/17605586/6001394d-276a-442a-90ad-d20b3d69cf2e"></img>
 <br>
 <sub>Testing E1M2 (without the roof)</sub>
 <br>
@@ -19,6 +19,9 @@ The complete controller will be able to climb ladders, jump, crouch and swim and
   * Smoother collisions with level geometry.
   * Versatile step detection and climbing.
   * Works with imported Mesh geometry.
+<br>
+<img src="https://github.com/Btan2/Q_Move/assets/17605586/67360fdc-5039-4081-af13-5e0b11646fae"></img>
+<br>
 <br>
 
 [ **Upcoming Update** ]
