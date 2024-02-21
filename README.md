@@ -1,34 +1,72 @@
 # Q_Move
 A Quake-like controller for Godot.
-
-# Current Engine Version: Godot 4.1
-Status: The controller is now being re-built using a custom collision detection & response system. Additional work is currently underway to ensure the system is optimized.
 <br>
-![output2](https://github.com/Btan2/Q_Move/assets/17605586/4e9d9996-21da-4a20-8eef-8ee7c48bb004)
+<br>**Github Version:** Godot 3.5
+<br>**Updated Version:** Godot 4.2.1 Mono
+<br>
+<br>
+![output2](https://github.com/Btan2/Q_Move/assets/17605586/6001394d-276a-442a-90ad-d20b3d69cf2e)
+<br>
+<sub>Testing E1M2 (without the roof)</sub>
+<br>
+<br>
 
+The aim of this project is to provide Godot developers with a robust character controller that delivers a similar level of responsiveness as Quake and Half-Life.
+The complete controller will be able to climb ladders, jump, crouch and swim and climb steps and low geometry.
+<br>
+<br>**Features:**
+  * Using Quake and Quake 3 source code to calculate player movement physics.
+  * Smoother collisions with level geometry.
+  * Versatile step detection and climbing.
+  * Works with imported Mesh geometry.
+<br>
 
+[ **Upcoming Update** ]
+<br>
+<br>
+Please be aware that the next update will not be game-ready. The next update solely focused on re-writing player vs static geometry collision. Additional collision functions, like colliding with moving objects or raycasting, have not been programmed yet.
+<br>
+<br>
+***The next update uses C# scripting, so only Mono engine builds will work***
+<br>
+<br>
 
-# About
-The aim of this project is to provide Godot developers with a robust character controller that delivers the same level of responsiveness as Quake and Half-Life. A majority of Quake-like controllers seem to lack the ability to handle steps and often have to resort to rudimentary workarounds such as invisible ramps or singular raycast lines which do not represent the player's hull accurately. This controller is an attempt to fix this issue and to recreate the idiosyncratic behaviours of the Quake and Half-Life controllers.
+# Scope:
+The scope of this project will evolve over time as more features are implemented and completed.
+  * Small, single player projects.
+  * Low/medium poly level geometry.
+  * Big open world games are not recommended.
+<br>
 
-A generalised description on how the step function works can be found on my website: https://thelowrooms.com/articledir/programming_stepclimbing.php
+# Credits:
+  * Air control is copied and modified from WiggleWizard's Quake3 Movement script <br> https://github.com/WiggleWizard/quake3-movement-unity3d
+  * Modern style head-bob converted from Admer456's "Better View Bobbing" tutorial <br> https://gamebanana.com/tuts/12972
+  * A generalised description on how a step climbing function works can be found on my website <br> https://thelowrooms.com/articledir/programming_stepclimbing.php
+<br>
 
-# Features
-  - Various functions from Quake source code have been converted into GDScript, such as head-bob and camera movement rolling. 
-  - Air control and acceleration was taken and modified from WiggleWizard's Quake3 Movement script (https://github.com/WiggleWizard/quake3-movement-unity3d).
-  - Optional modern style head-bob converted from Admer456's "Better View Bobbing" tutorial (https://gamebanana.com/tuts/12972).
-  - Proper step climbing; no invisible ramps or other trickery used.
-  - Trace singleton addon for collision shape casting (used for step detection).
-  - Jump hang to allow more forgiving jumping precision off ledges.
-  - More standard FPS features to be added to the project over time.
+# TODO:
+  [ **Upcoming Update** ]
+  * Proper multi plane velocity clipping.
+  * Proper sphere casting.  
+  * Moving objects: boxes, spheres, lifts.
+  * Scene partitioning
+  * Crouching
+  * Ladders
+  * Swimming
+  * Raycasting
+  * Nav-mesh implementation  
+<br>
 
-# Current Issues
-  - Sliding along a wall while moving into a step can sometimes stop the player or just come off as buggy.<b> -> [working on it] </b>
-  - The trace functions are a little inefficient as multiple casting methods are required to retrieve collision information; a standard trace call will cast 3 shape queries for collision info.
-  - The controller will slowly slide down non-steep slopes. This issue is common with Godot.
-  - Complex geometry hasn't been tested yet, only simple box shapes have been used so far.
-  - The player can fall infinitely if caught between two steep slopes.<b> -> [working on it] </b>
-  - The player can sometimes move up if pressed between two steep slopes when they should otherwise slide down, although this was also prevalent in Half-Life and Quake so I might keep it in for prosterity.
+# Issues:
+  [ **Upcoming Update** ]
+  * Player vs static objects only.
+  * Mono builds only
+  * Dense, high poly mesh objects should be avoided.
+  * Some sharp angles will cause jittering.
+  * Does not interact with the Godot physics engine.
+  * The player can fall infinitely if caught between multiple steep slopes with no stable ground beneath, which is the correct behaviour. This can be circumvented by adding invisible geometry to block access to bad spots.
+  * Similar to Half-Life and Quake, the player can slowly creep up and along the sharp crevice of two steep surfaces.
+<br>
 
 # License
 This project is under the GNU v3 license. I would highly appreciate a credit if you use this in your project(s).
